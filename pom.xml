@@ -1,0 +1,93 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+      
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>com.bixolabs</groupId>
+	<artifactId>cascading.solr</artifactId>
+	<name>Cascading Scheme for Apache Solr</name>
+	<packaging>jar</packaging>
+	<version>1.0-SNAPSHOT</version>
+	<description>Cascading Scheme for creating Lucene indexes using Solr</description>
+	<url>http://github.com/bixolabs/cascading.solr</url>
+	<issueManagement>
+		<system>GitHub</system>
+		<url>http://github.com/bixolabs/cascading.solr/issues</url>
+	</issueManagement>
+	<scm>
+		<connection>scm:git:git://github.com/bixolabs/cascading.solr.git</connection>
+		<developerConnection>TransPac Software, Inc.</developerConnection>
+		<url>https://github.com/bixolabs/cascading.solr/</url>
+	</scm>
+	<organization>
+		<name>Bixo Labs</name>
+		<url>http://bixolabs.com</url>
+	</organization>
+	<repositories>
+		<repository>
+			<id>Bixo</id>
+			<name>Bixo GitHub repository</name>
+			<url>http://bixo.github.com/repo/</url>
+		</repository>
+	</repositories>
+	
+	<dependencies>
+		<dependency>
+            <groupId>org.apache.hadoop</groupId>
+            <artifactId>hadoop-core</artifactId>
+            <version>0.20.2</version>
+            <scope>provided</scope>
+            <exclusions>
+            	<exclusion>
+            		<artifactId>commons-httpclient</artifactId>
+            		<groupId>commons-httpclient</groupId>
+            	</exclusion>
+            	<exclusion>
+            		<artifactId>jasper</artifactId>
+            		<groupId>org.apache.tomcat</groupId>
+            	</exclusion>
+            </exclusions>
+        </dependency>
+        
+		<dependency>
+            <groupId>cascading</groupId>
+            <artifactId>cascading-core</artifactId>
+            <version>1.2.1</version>
+        </dependency>
+        
+		<dependency>
+            <groupId>org.apache.solr</groupId>
+            <artifactId>solr-core</artifactId>
+            <version>3.1.0</version>
+        </dependency>
+        
+		<dependency>
+            <groupId>log4j</groupId>
+            <artifactId>log4j</artifactId>
+            <version>1.2.14</version>
+        </dependency>
+        
+		<dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <version>4.7</version>
+            <scope>test</scope>
+        </dependency>
+
+		<dependency>
+            <groupId>org.mockito</groupId>
+            <artifactId>mockito-core</artifactId>
+            <version>1.8.0</version>
+            <scope>test</scope>
+        </dependency>
+
+		<dependency>
+            <groupId>ant-eclipse</groupId>
+            <artifactId>ant-eclipse-jvm1.2</artifactId>
+            <version>1.0</version>
+            <scope>provided</scope>
+        </dependency>
+
+
+	</dependencies>
+</project>
