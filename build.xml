@@ -228,8 +228,6 @@
 				        output="${build.dir.main-classes-eclipse}" />
 
 				<!-- TODO use build.properties (with more consistent names) for these paths -->
-				<source path="${basedir}/src/main/resources"
-				        output="${build.dir.main-classes-eclipse}" />
 				<source path="${basedir}/src/test/java"
 				        output="${build.dir.test-classes-eclipse}" />
 				<source path="${basedir}/src/test/resources"
