@@ -26,6 +26,7 @@ import cascading.scheme.SequenceFile;
 import cascading.tap.Lfs;
 import cascading.tap.SinkMode;
 import cascading.tap.Tap;
+import cascading.tap.TapException;
 import cascading.tuple.Fields;
 import cascading.tuple.Tuple;
 import cascading.tuple.TupleEntryCollector;
@@ -56,22 +57,34 @@ public class SolrSchemeTest {
         try {
             new SolrScheme(new Fields("a", "b"), "src/test/resources");
             fail("Should have thrown exception");
-        } catch (Exception e) {
+        } catch (TapException e) {
         }
     }
     
     @Test
     public void testSchemeWrongFields() throws Exception {
         try {
-            new SolrScheme(new Fields("host", "bogus-field"), "src/test/resources/solr/");
+            // Need to make sure we include the required fields.
+            new SolrScheme(new Fields("id", "url", "bogus-field"), "src/test/resources/solr/");
             fail("Should have thrown exception");
-        } catch (Exception e) {
+        } catch (TapException e) {
+            assert(e.getMessage().contains("field name doesn't exist"));
+        }
+    }
+    
+    @Test
+    public void testSchemeMissingRequiredField() throws Exception {
+        try {
+            new SolrScheme(new Fields("host"), "src/test/resources/solr/");
+            fail("Should have thrown exception");
+        } catch (TapException e) {
+            assert(e.getMessage().contains("field name for required"));
         }
     }
     
     @Test
     public void testSimpleIndexing() throws Exception {
-        final Fields testFields = new Fields("id", "host", "url", "title", "content");
+        final Fields testFields = new Fields("id", "host", "url", "title", "content", "type");
 
         final String in = TEST_DIR + "testSimpleIndexing/in";
         final String out = TEST_DIR + "testSimpleIndexing/out";
@@ -84,6 +97,7 @@ public class SolrSchemeTest {
         t.add("http://domain.com/page.html");
         t.add("Title");
         t.add("This is some content that I can use to search for words like Solr and BixoLabs");
+        t.add(new Tuple("type1", "type2"));
         write.add(t);
         
         t = new Tuple();
@@ -92,6 +106,7 @@ public class SolrSchemeTest {
         t.add("http://domain2.com/page.html");
         t.add("Super Title");
         t.add("Different stuff");
+        t.add(new Tuple("type1"));
         write.add(t);
         write.close();
 
@@ -124,6 +139,10 @@ public class SolrSchemeTest {
         params.set(CommonParams.Q, "bogus");
         res = solrServer.query(params);
         assertEquals(0, res.getResults().size());
+        
+        params.set(CommonParams.Q, "type:type1");
+        res = solrServer.query(params);
+        assertEquals(2, res.getResults().size());
     }
     
 

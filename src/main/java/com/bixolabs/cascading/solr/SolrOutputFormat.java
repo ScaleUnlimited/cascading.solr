@@ -114,7 +114,15 @@ public class SolrOutputFormat implements OutputFormat<Tuple, Tuple> {
             
             for (int i = 0; i < _sinkFields.size(); i++) {
                 String name = (String)_sinkFields.get(i);
-                doc.addField(name, "" + value.get(i).toString());
+                Comparable fieldValue = value.get(i);
+                if (fieldValue instanceof Tuple) {
+                    Tuple list = (Tuple)fieldValue;
+                    for (int j = 0; j < list.size(); j++) {
+                        doc.addField(name, list.getObject(j).toString());
+                    }
+                } else {
+                    doc.addField(name, "" + fieldValue.toString());
+                }
             }
 
             try {

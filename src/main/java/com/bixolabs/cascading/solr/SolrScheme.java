@@ -3,6 +3,9 @@ package com.bixolabs.cascading.solr;
 import java.io.File;
 import java.io.IOException;
 import java.util.Collection;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
 
 import javax.xml.parsers.ParserConfigurationException;
 
@@ -13,7 +16,9 @@ import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.OutputCollector;
 import org.apache.solr.core.CoreContainer;
 import org.apache.solr.core.SolrCore;
+import org.apache.solr.schema.FieldType;
 import org.apache.solr.schema.IndexSchema;
+import org.apache.solr.schema.SchemaField;
 import org.xml.sax.SAXException;
 
 import cascading.scheme.Scheme;
@@ -51,10 +56,21 @@ public class SolrScheme extends Scheme {
             schema = core.getSchema();
         }
         
+        Map<String, SchemaField> solrFields = schema.getFields();
+        Set<String> schemeFieldnames = new HashSet<String>();
+        
         for (int i = 0; i < schemeFields.size(); i++) {
             String fieldName = schemeFields.get(i).toString();
-            if (schema.getFieldOrNull(fieldName) == null) {
+            if (!solrFields.containsKey(fieldName)) {
                 throw new TapException("Sink field name doesn't exist in Solr schema: " + fieldName);
+            }
+            schemeFieldnames.add(fieldName);
+        }
+        
+        for (String solrFieldname : solrFields.keySet()) {
+            SchemaField solrField = solrFields.get(solrFieldname);
+            if (solrField.isRequired() && !schemeFieldnames.contains(solrFieldname)) {
+                throw new TapException("No sink field name for required Solr field: " + solrFieldname);
             }
         }
         
