@@ -33,7 +33,9 @@ import cascading.tuple.TupleEntryCollector;
 
 public class SolrSchemeTest {
 
-    private static final String TEST_DIR = "build/test/SolrSchemeTest/"; 
+    private static final String TEST_DIR = "build/test/SolrSchemeTest/";
+    private static final String SOLR_HOME_NUTCH = "src/test/resources/solr-home-nutch/"; 
+    private static final String SOLR_HOME_31 = "src/test/resources/solr-home-3.1/"; 
     
     @Before
     public void setup() throws IOException {
@@ -65,7 +67,7 @@ public class SolrSchemeTest {
     public void testSchemeWrongFields() throws Exception {
         try {
             // Need to make sure we include the required fields.
-            new SolrScheme(new Fields("id", "url", "bogus-field"), "src/test/resources/solr/");
+            new SolrScheme(new Fields("id", "url", "bogus-field"), SOLR_HOME_NUTCH);
             fail("Should have thrown exception");
         } catch (TapException e) {
             assert(e.getMessage().contains("field name doesn't exist"));
@@ -75,7 +77,7 @@ public class SolrSchemeTest {
     @Test
     public void testSchemeMissingRequiredField() throws Exception {
         try {
-            new SolrScheme(new Fields("host"), "src/test/resources/solr/");
+            new SolrScheme(new Fields("host"), SOLR_HOME_NUTCH);
             fail("Should have thrown exception");
         } catch (TapException e) {
             assert(e.getMessage().contains("field name for required"));
@@ -113,7 +115,7 @@ public class SolrSchemeTest {
         // Now read from the results, and write to a Solr index.
         Pipe writePipe = new Pipe("tuples to Solr");
 
-        final String solrHome = "src/test/resources/solr/";
+        final String solrHome = SOLR_HOME_NUTCH;
         Tap solrSink = new Lfs(new SolrScheme(testFields, solrHome), out);
         Flow flow = new FlowConnector().connect(lfsSource, solrSink, writePipe);
         flow.complete();
@@ -143,6 +145,92 @@ public class SolrSchemeTest {
         params.set(CommonParams.Q, "type:type1");
         res = solrServer.query(params);
         assertEquals(2, res.getResults().size());
+    }
+    
+    @Test
+    public void testMulticore() throws Exception {
+        final Fields testFields = new Fields("url", "title");
+
+        final String in = TEST_DIR + "testMulticore/in";
+        final String out = TEST_DIR + "testMulticore/out";
+
+        Lfs lfsSource = new Lfs(new SequenceFile(testFields), in, SinkMode.REPLACE);
+        TupleEntryCollector write = lfsSource.openForWrite(new JobConf());
+        Tuple t = new Tuple();
+        t.add("http://www.domain.com/page1.html");
+        t.add("title1");
+        write.add(t);
+        
+        t = new Tuple();
+        t.add("http://www.domain.com/page1.html");
+        t.add("title2");
+        write.add(t);
+        write.close();
+
+        // Now read from the results, and write to a Solr index.
+        Pipe writePipe = new Pipe("tuples to Solr");
+
+        final String solrHome = "src/test/resources/search-solr-home";
+        Tap solrSink = new Lfs(new SolrScheme(testFields, solrHome), out);
+        Flow flow = new FlowConnector().connect(lfsSource, solrSink, writePipe);
+        flow.complete();
+
+        // Open up the Solr index, and do some searches.
+        System.setProperty("solr.solr.home", solrHome);
+        System.setProperty("solr.data.dir", out + "/part-00000");
+        CoreContainer.Initializer initializer = new CoreContainer.Initializer();
+        CoreContainer coreContainer;
+        coreContainer = initializer.initialize();
+        SolrServer solrServer = new EmbeddedSolrServer(coreContainer, "");
+
+        ModifiableSolrParams params = new ModifiableSolrParams();
+        params.set(CommonParams.Q, "title:title1");
+
+        QueryResponse res = solrServer.query(params);
+        assertEquals(1, res.getResults().size());
+    }
+
+    @Test
+    public void testSolr31Indexing() throws Exception {
+        final Fields testFields = new Fields("id", "name");
+
+        final String in = TEST_DIR + "testSolr31Indexing/in";
+        final String out = TEST_DIR + "testSolr31Indexing/out";
+
+        Lfs lfsSource = new Lfs(new SequenceFile(testFields), in, SinkMode.REPLACE);
+        TupleEntryCollector write = lfsSource.openForWrite(new JobConf());
+        Tuple t = new Tuple();
+        t.add("1");
+        t.add("name1");
+        write.add(t);
+        
+        t = new Tuple();
+        t.add("2");
+        t.add("name2");
+        write.add(t);
+        write.close();
+
+        // Now read from the results, and write to a Solr index.
+        Pipe writePipe = new Pipe("tuples to Solr");
+
+        final String solrHome = SOLR_HOME_31;
+        Tap solrSink = new Lfs(new SolrScheme(testFields, solrHome), out);
+        Flow flow = new FlowConnector().connect(lfsSource, solrSink, writePipe);
+        flow.complete();
+
+        // Open up the Solr index, and do some searches.
+        System.setProperty("solr.solr.home", solrHome);
+        System.setProperty("solr.data.dir", out + "/part-00000");
+        CoreContainer.Initializer initializer = new CoreContainer.Initializer();
+        CoreContainer coreContainer;
+        coreContainer = initializer.initialize();
+        SolrServer solrServer = new EmbeddedSolrServer(coreContainer, "");
+
+        ModifiableSolrParams params = new ModifiableSolrParams();
+        params.set(CommonParams.Q, "name:name1");
+
+        QueryResponse res = solrServer.query(params);
+        assertEquals(1, res.getResults().size());
     }
     
 

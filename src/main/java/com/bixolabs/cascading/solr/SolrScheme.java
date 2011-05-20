@@ -6,6 +6,7 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 
 import javax.xml.parsers.ParserConfigurationException;
 
@@ -43,38 +44,53 @@ public class SolrScheme extends Scheme {
             throw new TapException("Solr home directory doesn't exist: " + solrHomeDir);
         }
         
+        // Set up a temp location for data, so when we instantiate the coreContainer,
+        // we don't pollute the solr home with a /data sub-dir.
+        String tmpFolder = System.getProperty("java.io.tmpdir");
+        File tmpDataDir = new File(tmpFolder, UUID.randomUUID().toString());
+        tmpDataDir.mkdir();
+        
         System.setProperty("solr.solr.home", _solrHomeDir.getAbsolutePath());
+        System.setProperty("solr.data.dir", tmpDataDir.getAbsolutePath());
         CoreContainer.Initializer initializer = new CoreContainer.Initializer();
-        CoreContainer coreContainer = initializer.initialize();
-        Collection<SolrCore> cores = coreContainer.getCores();
-        if (cores.size() != 1) {
-            throw new TapException("Solr config can only have one core");
-        }
+        CoreContainer coreContainer = null;
         
-        IndexSchema schema = null;
-        for (SolrCore core : cores) {
-            schema = core.getSchema();
-        }
-        
-        Map<String, SchemaField> solrFields = schema.getFields();
-        Set<String> schemeFieldnames = new HashSet<String>();
-        
-        for (int i = 0; i < schemeFields.size(); i++) {
-            String fieldName = schemeFields.get(i).toString();
-            if (!solrFields.containsKey(fieldName)) {
-                throw new TapException("Sink field name doesn't exist in Solr schema: " + fieldName);
+        try {
+            coreContainer = initializer.initialize();
+            Collection<SolrCore> cores = coreContainer.getCores();
+            if (cores.size() != 1) {
+                throw new TapException("Solr config can only have one core");
             }
-            schemeFieldnames.add(fieldName);
-        }
-        
-        for (String solrFieldname : solrFields.keySet()) {
-            SchemaField solrField = solrFields.get(solrFieldname);
-            if (solrField.isRequired() && !schemeFieldnames.contains(solrFieldname)) {
-                throw new TapException("No sink field name for required Solr field: " + solrFieldname);
+
+            IndexSchema schema = null;
+            for (SolrCore core : cores) {
+                schema = core.getSchema();
+            }
+
+            Map<String, SchemaField> solrFields = schema.getFields();
+            Set<String> schemeFieldnames = new HashSet<String>();
+
+            for (int i = 0; i < schemeFields.size(); i++) {
+                String fieldName = schemeFields.get(i).toString();
+                if (!solrFields.containsKey(fieldName)) {
+                    throw new TapException("Sink field name doesn't exist in Solr schema: " + fieldName);
+                }
+                schemeFieldnames.add(fieldName);
+            }
+
+            for (String solrFieldname : solrFields.keySet()) {
+                SchemaField solrField = solrFields.get(solrFieldname);
+                if (solrField.isRequired() && !schemeFieldnames.contains(solrFieldname)) {
+                    throw new TapException("No sink field name for required Solr field: " + solrFieldname);
+                }
+            }
+
+            _schemeFields = schemeFields;
+        } finally {
+            if (coreContainer != null) {
+                coreContainer.shutdown();
             }
         }
-        
-        _schemeFields = schemeFields;
     }
     
     
@@ -94,7 +110,7 @@ public class SolrScheme extends Scheme {
         // and thus copying over each other?
         // TODO KKr - should I get rid of this temp directory when we're done?
         Path outputPath = FileOutputFormat.getOutputPath(conf);
-        Path hdfsSolrHomeDir = new Path(outputPath, "_temporary/solr-home");
+        Path hdfsSolrHomeDir = new Path(outputPath, "_tempsolr/solr-home");
         
         // Copy Solr conf into HDFS.
         FileSystem fs = hdfsSolrHomeDir.getFileSystem(conf);

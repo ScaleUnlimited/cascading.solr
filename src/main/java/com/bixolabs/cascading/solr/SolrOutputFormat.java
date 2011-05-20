@@ -37,13 +37,15 @@ public class SolrOutputFormat implements OutputFormat<Tuple, Tuple> {
         private Path _outputPath;
         private FileSystem _outputFS;
         private transient File _localIndexDir;
+        private transient CoreContainer _coreContainer;
         private transient SolrServer _solrServer;
         private transient Fields _sinkFields;
 
         public SolrRecordWriter(JobConf conf, String name) throws IOException {
             String tmpFolder = System.getProperty("java.io.tmpdir");
             File localSolrHome = new File(tmpFolder, UUID.randomUUID().toString());
-
+            LOGGER.trace("localSolrHome: " + localSolrHome);
+            
             // Copy solr home from HDFS to temp local location.
             Path sourcePath = new Path(conf.get(SOLR_HOME_PATH_KEY));
             FileSystem sourceFS = sourcePath.getFileSystem(conf);
@@ -64,12 +66,13 @@ public class SolrOutputFormat implements OutputFormat<Tuple, Tuple> {
                 System.setProperty("solr.solr.home", localSolrHome.getAbsolutePath());
                 System.setProperty("solr.data.dir", _localIndexDir.getAbsolutePath());
                 CoreContainer.Initializer initializer = new CoreContainer.Initializer();
-                CoreContainer coreContainer;
-                coreContainer = initializer.initialize();
-                _solrServer = new EmbeddedSolrServer(coreContainer, "");
-            } catch (ParserConfigurationException e) {
-                throw new IOException(e);
-            } catch (SAXException e) {
+                _coreContainer = initializer.initialize();
+                _solrServer = new EmbeddedSolrServer(_coreContainer, "");
+            } catch (Exception e) {
+                if (_coreContainer != null) {
+                    _coreContainer.shutdown();
+                }
+                
                 throw new IOException(e);
             }
 
@@ -95,8 +98,11 @@ public class SolrOutputFormat implements OutputFormat<Tuple, Tuple> {
             reporterThread.start();
 
             try {
-                _solrServer.commit();
-                _solrServer.optimize();
+                _solrServer.commit(true, true);
+                _solrServer.optimize(true, true);
+                
+                _coreContainer.shutdown();
+                _solrServer = null;
                 
                 LOGGER.info("Copying index from local to " + _outputPath);
                 File indexDir = new File(_localIndexDir, "index");
