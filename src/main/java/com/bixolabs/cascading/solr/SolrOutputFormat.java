@@ -29,7 +29,7 @@ import cascading.util.Util;
 public class SolrOutputFormat implements OutputFormat<Tuple, Tuple> {
     private static final Logger LOGGER = Logger.getLogger(SolrOutputFormat.class);
     
-    public static final String SOLR_CONF_PATH_KEY = "com.bixolabs.cascading.solr.confPath";
+    public static final String SOLR_HOME_PATH_KEY = "com.bixolabs.cascading.solr.homePath";
     public static final String SINK_FIELDS_KEY = "com.bixolabs.cascading.solr.sinkFields";
 
     private static class SolrRecordWriter implements RecordWriter<Tuple, Tuple> {
@@ -44,8 +44,8 @@ public class SolrOutputFormat implements OutputFormat<Tuple, Tuple> {
             String tmpFolder = System.getProperty("java.io.tmpdir");
             File localSolrHome = new File(tmpFolder, UUID.randomUUID().toString());
 
-            // Copy solr conf from HDFS to temp local location.
-            Path sourcePath = new Path(conf.get(SOLR_CONF_PATH_KEY));
+            // Copy solr home from HDFS to temp local location.
+            Path sourcePath = new Path(conf.get(SOLR_HOME_PATH_KEY));
             FileSystem sourceFS = sourcePath.getFileSystem(conf);
             sourceFS.copyToLocalFile(sourcePath, new Path(localSolrHome.getAbsolutePath()));
             

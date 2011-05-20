@@ -33,17 +33,17 @@ import cascading.util.Util;
 @SuppressWarnings("serial")
 public class SolrScheme extends Scheme {
 
-    private File _solrConfDir;
+    private File _solrHomeDir;
     private Fields _schemeFields;
     
-    public SolrScheme(Fields schemeFields, String solrConfDir) throws IOException, ParserConfigurationException, SAXException {
-        // Verify solrConfDir exists
-        _solrConfDir = new File(solrConfDir);
-        if (!_solrConfDir.exists() || !_solrConfDir.isDirectory()) {
-            throw new TapException("Solr conf directory doesn't exist: " + solrConfDir);
+    public SolrScheme(Fields schemeFields, String solrHomeDir) throws IOException, ParserConfigurationException, SAXException {
+        // Verify solrHomeDir exists
+        _solrHomeDir = new File(solrHomeDir);
+        if (!_solrHomeDir.exists() || !_solrHomeDir.isDirectory()) {
+            throw new TapException("Solr home directory doesn't exist: " + solrHomeDir);
         }
         
-        System.setProperty("solr.solr.home", _solrConfDir.getAbsolutePath());
+        System.setProperty("solr.solr.home", _solrHomeDir.getAbsolutePath());
         CoreContainer.Initializer initializer = new CoreContainer.Initializer();
         CoreContainer coreContainer = initializer.initialize();
         Collection<SolrCore> cores = coreContainer.getCores();
@@ -94,11 +94,11 @@ public class SolrScheme extends Scheme {
         // and thus copying over each other?
         // TODO KKr - should I get rid of this temp directory when we're done?
         Path outputPath = FileOutputFormat.getOutputPath(conf);
-        Path hdfsSolrConfDir = new Path(outputPath, "_temporary/solr-home");
+        Path hdfsSolrHomeDir = new Path(outputPath, "_temporary/solr-home");
         
         // Copy Solr conf into HDFS.
-        FileSystem fs = hdfsSolrConfDir.getFileSystem(conf);
-        fs.copyFromLocalFile(new Path(_solrConfDir.getAbsolutePath()), hdfsSolrConfDir);
+        FileSystem fs = hdfsSolrHomeDir.getFileSystem(conf);
+        fs.copyFromLocalFile(new Path(_solrHomeDir.getAbsolutePath()), hdfsSolrHomeDir);
 
         conf.setOutputKeyClass(Tuple.class);
         conf.setOutputValueClass(Tuple.class);
@@ -110,7 +110,7 @@ public class SolrScheme extends Scheme {
             conf.set(SolrOutputFormat.SINK_FIELDS_KEY, Util.serializeBase64(getSinkFields()));
         }
         
-        conf.set(SolrOutputFormat.SOLR_CONF_PATH_KEY, hdfsSolrConfDir.toString());
+        conf.set(SolrOutputFormat.SOLR_HOME_PATH_KEY, hdfsSolrHomeDir.toString());
     }
 
     @Override
