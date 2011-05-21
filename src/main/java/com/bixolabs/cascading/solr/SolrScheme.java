@@ -58,7 +58,9 @@ public class SolrScheme extends Scheme {
         try {
             coreContainer = initializer.initialize();
             Collection<SolrCore> cores = coreContainer.getCores();
-            if (cores.size() != 1) {
+            if (cores.size() == 0) {
+                throw new TapException("No Solr cores are available");
+            } else if (cores.size() > 1) {
                 throw new TapException("Solr config can only have one core");
             }
 

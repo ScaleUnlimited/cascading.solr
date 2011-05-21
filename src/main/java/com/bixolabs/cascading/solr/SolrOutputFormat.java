@@ -42,9 +42,8 @@ public class SolrOutputFormat implements OutputFormat<Tuple, Tuple> {
         private transient Fields _sinkFields;
 
         public SolrRecordWriter(JobConf conf, String name) throws IOException {
-            String tmpFolder = System.getProperty("java.io.tmpdir");
+            String tmpFolder = conf.getJobLocalDir();
             File localSolrHome = new File(tmpFolder, UUID.randomUUID().toString());
-            LOGGER.trace("localSolrHome: " + localSolrHome);
             
             // Copy solr home from HDFS to temp local location.
             Path sourcePath = new Path(conf.get(SOLR_HOME_PATH_KEY));

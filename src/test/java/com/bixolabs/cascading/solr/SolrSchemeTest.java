@@ -148,49 +148,6 @@ public class SolrSchemeTest {
     }
     
     @Test
-    public void testMulticore() throws Exception {
-        final Fields testFields = new Fields("url", "title");
-
-        final String in = TEST_DIR + "testMulticore/in";
-        final String out = TEST_DIR + "testMulticore/out";
-
-        Lfs lfsSource = new Lfs(new SequenceFile(testFields), in, SinkMode.REPLACE);
-        TupleEntryCollector write = lfsSource.openForWrite(new JobConf());
-        Tuple t = new Tuple();
-        t.add("http://www.domain.com/page1.html");
-        t.add("title1");
-        write.add(t);
-        
-        t = new Tuple();
-        t.add("http://www.domain.com/page1.html");
-        t.add("title2");
-        write.add(t);
-        write.close();
-
-        // Now read from the results, and write to a Solr index.
-        Pipe writePipe = new Pipe("tuples to Solr");
-
-        final String solrHome = "src/test/resources/search-solr-home";
-        Tap solrSink = new Lfs(new SolrScheme(testFields, solrHome), out);
-        Flow flow = new FlowConnector().connect(lfsSource, solrSink, writePipe);
-        flow.complete();
-
-        // Open up the Solr index, and do some searches.
-        System.setProperty("solr.solr.home", solrHome);
-        System.setProperty("solr.data.dir", out + "/part-00000");
-        CoreContainer.Initializer initializer = new CoreContainer.Initializer();
-        CoreContainer coreContainer;
-        coreContainer = initializer.initialize();
-        SolrServer solrServer = new EmbeddedSolrServer(coreContainer, "");
-
-        ModifiableSolrParams params = new ModifiableSolrParams();
-        params.set(CommonParams.Q, "title:title1");
-
-        QueryResponse res = solrServer.query(params);
-        assertEquals(1, res.getResults().size());
-    }
-
-    @Test
     public void testSolr31Indexing() throws Exception {
         final Fields testFields = new Fields("id", "name");
 
