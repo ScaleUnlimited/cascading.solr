@@ -64,11 +64,7 @@ public class SolrScheme extends Scheme {
                 throw new TapException("Solr config can only have one core");
             }
 
-            IndexSchema schema = null;
-            for (SolrCore core : cores) {
-                schema = core.getSchema();
-            }
-
+            IndexSchema schema = cores.iterator().next().getSchema();
             Map<String, SchemaField> solrFields = schema.getFields();
             Set<String> schemeFieldnames = new HashSet<String>();
 
@@ -77,6 +73,7 @@ public class SolrScheme extends Scheme {
                 if (!solrFields.containsKey(fieldName)) {
                     throw new TapException("Sink field name doesn't exist in Solr schema: " + fieldName);
                 }
+                
                 schemeFieldnames.add(fieldName);
             }
 
