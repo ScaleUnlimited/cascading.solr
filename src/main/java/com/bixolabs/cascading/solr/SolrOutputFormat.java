@@ -1,6 +1,7 @@
 package com.bixolabs.cascading.solr;
 
 import java.io.File;
+import java.io.FilenameFilter;
 import java.io.IOException;
 import java.util.UUID;
 
@@ -42,8 +43,9 @@ public class SolrOutputFormat implements OutputFormat<Tuple, Tuple> {
         private transient Fields _sinkFields;
 
         public SolrRecordWriter(JobConf conf, String name) throws IOException {
-            String tmpFolder = conf.getJobLocalDir();
-            File localSolrHome = new File(tmpFolder, UUID.randomUUID().toString());
+            // String tmpFolder = conf.getJobLocalDir();
+            String tmpDir = System.getProperty("java.io.tmpdir");
+            File localSolrHome = new File(tmpDir, "cascading.solr-" + UUID.randomUUID());
             
             // Copy solr home from HDFS to temp local location.
             Path sourcePath = new Path(conf.get(SOLR_HOME_PATH_KEY));
@@ -78,6 +80,16 @@ public class SolrOutputFormat implements OutputFormat<Tuple, Tuple> {
         }
         
         @Override
+        protected void finalize() throws Throwable {
+            if (_solrServer != null) {
+                _coreContainer.shutdown();
+                _solrServer = null;
+            }
+            
+            super.finalize();
+        }
+        
+        @Override
         public void close(final Reporter reporter) throws IOException {
             
             // Hadoop need to know we still working on it.
@@ -103,8 +115,13 @@ public class SolrOutputFormat implements OutputFormat<Tuple, Tuple> {
                 _coreContainer.shutdown();
                 _solrServer = null;
                 
-                LOGGER.info("Copying index from local to " + _outputPath);
                 File indexDir = new File(_localIndexDir, "index");
+                LOGGER.info(String.format("Copying index from %s to %s", _localIndexDir, _outputPath));
+                // HACK!!! Hadoop has a bug where a .crc file locally with the matching name will
+                // trigger an error, so we want to get rid of all such .crc files from inside of
+                // the index dir.
+                removeCrcFiles(indexDir);
+                
                 _outputFS.copyFromLocalFile(true, new Path(indexDir.getAbsolutePath()), _outputPath);
             } catch (SolrServerException e) {
                 throw new IOException(e);
@@ -113,6 +130,20 @@ public class SolrOutputFormat implements OutputFormat<Tuple, Tuple> {
             }
         }
 
+        private void removeCrcFiles(File dir) {
+            File[] crcFiles = dir.listFiles(new FilenameFilter() {
+
+                @Override
+                public boolean accept(File dir, String name) {
+                    return name.endsWith(".crc");
+                }
+            });
+            
+            for (File crcFile : crcFiles) {
+                crcFile.delete();
+            }
+        }
+        
         @Override
         public void write(Tuple key, Tuple value) throws IOException {
             SolrInputDocument doc = new SolrInputDocument();
@@ -123,10 +154,10 @@ public class SolrOutputFormat implements OutputFormat<Tuple, Tuple> {
                 if (fieldValue instanceof Tuple) {
                     Tuple list = (Tuple)fieldValue;
                     for (int j = 0; j < list.size(); j++) {
-                        doc.addField(name, list.getObject(j).toString());
+                        safeAdd(doc, name, list.getObject(j).toString());
                     }
                 } else {
-                    doc.addField(name, "" + fieldValue.toString());
+                    safeAdd(doc, name, "" + fieldValue.toString());
                 }
             }
 
@@ -134,6 +165,12 @@ public class SolrOutputFormat implements OutputFormat<Tuple, Tuple> {
                 _solrServer.add(doc);
             } catch (SolrServerException e) {
                 throw new IOException(e);
+            }
+        }
+        
+        private void safeAdd(SolrInputDocument doc, String fieldName, String value) {
+            if ((value != null) && (value.length() > 0)) {
+                doc.addField(fieldName, value);
             }
         }
         
