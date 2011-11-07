@@ -17,7 +17,6 @@ import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.OutputCollector;
 import org.apache.solr.core.CoreContainer;
 import org.apache.solr.core.SolrCore;
-import org.apache.solr.schema.FieldType;
 import org.apache.solr.schema.IndexSchema;
 import org.apache.solr.schema.SchemaField;
 import org.xml.sax.SAXException;
@@ -36,13 +35,20 @@ public class SolrScheme extends Scheme {
 
     private File _solrHomeDir;
     private Fields _schemeFields;
+    private int _maxSegments;
     
     public SolrScheme(Fields schemeFields, String solrHomeDir) throws IOException, ParserConfigurationException, SAXException {
+        this(schemeFields, solrHomeDir, SolrOutputFormat.DEFAULT_MAX_SEGMENTS);
+    }
+    
+    public SolrScheme(Fields schemeFields, String solrHomeDir, int maxSegments) throws IOException, ParserConfigurationException, SAXException {
         // Verify solrHomeDir exists
         _solrHomeDir = new File(solrHomeDir);
         if (!_solrHomeDir.exists() || !_solrHomeDir.isDirectory()) {
             throw new TapException("Solr home directory doesn't exist: " + solrHomeDir);
         }
+        
+        _maxSegments = maxSegments;
         
         // Set up a temp location for data, so when we instantiate the coreContainer,
         // we don't pollute the solr home with a /data sub-dir.
@@ -126,6 +132,7 @@ public class SolrScheme extends Scheme {
         }
         
         conf.set(SolrOutputFormat.SOLR_HOME_PATH_KEY, hdfsSolrHomeDir.toString());
+        conf.setInt(SolrOutputFormat.MAX_SEGMENTS_KEY, _maxSegments);
     }
 
     @Override
