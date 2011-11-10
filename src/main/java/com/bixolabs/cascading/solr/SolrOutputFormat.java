@@ -14,13 +14,15 @@ import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.OutputFormat;
 import org.apache.hadoop.mapred.RecordWriter;
 import org.apache.hadoop.mapred.Reporter;
-import org.apache.hadoop.mapreduce.Reducer.Context;
 import org.apache.hadoop.util.Progressable;
 import org.apache.log4j.Logger;
 import org.apache.solr.client.solrj.SolrServer;
 import org.apache.solr.client.solrj.SolrServerException;
 import org.apache.solr.client.solrj.embedded.EmbeddedSolrServer;
+import org.apache.solr.client.solrj.request.UpdateRequest;
+import org.apache.solr.client.solrj.response.UpdateResponse;
 import org.apache.solr.common.SolrInputDocument;
+import org.apache.solr.common.params.UpdateParams;
 import org.apache.solr.core.CoreContainer;
 
 import cascading.tuple.Fields;
@@ -198,7 +200,18 @@ public class SolrOutputFormat implements OutputFormat<Tuple, Tuple> {
                 Thread reporterThread = startProgressThread();
 
                 try {
-                    _solrServer.add(_inputDocs);
+                    UpdateRequest req = new UpdateRequest();
+                    req.add(_inputDocs);
+                    
+                    // Set up overwite=false. See https://issues.apache.org/jira/browse/SOLR-653
+                    // for details why we have to do it this way.
+                    req.setParam(UpdateParams.OVERWRITE, Boolean.toString(false));
+                    UpdateResponse rsp = req.process(_solrServer);
+                    
+                    // TODO KKr - figure out if we need to check this or not.
+                    if (rsp.getStatus() != 0) {
+                        throw new SolrServerException("Non-zero response from Solr: " + rsp.getStatus());
+                    }
                     
                     if (force) {
                         _solrServer.commit(true, true);

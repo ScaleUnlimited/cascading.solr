@@ -1,11 +1,10 @@
 package com.bixolabs.cascading.solr;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.fail;
 
 import java.io.File;
 import java.io.IOException;
-
-import javax.xml.parsers.ParserConfigurationException;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.mapred.JobConf;
@@ -17,7 +16,6 @@ import org.apache.solr.common.params.ModifiableSolrParams;
 import org.apache.solr.core.CoreContainer;
 import org.junit.Before;
 import org.junit.Test;
-import org.xml.sax.SAXException;
 
 import cascading.flow.Flow;
 import cascading.flow.FlowConnector;
