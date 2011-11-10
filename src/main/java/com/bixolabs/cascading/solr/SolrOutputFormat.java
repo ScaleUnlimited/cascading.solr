@@ -75,6 +75,8 @@ public class SolrOutputFormat implements OutputFormat<Tuple, Tuple> {
             _maxSegments = conf.getInt(MAX_SEGMENTS_KEY, DEFAULT_MAX_SEGMENTS);
             
             // This is where data will wind up, inside of an index subdir.
+            // We only need to do this if the output location isn't local - if it
+            // is, then we can write to it directly.
             _localIndexDir = new File(localSolrHome, "data");
 
             _inputDocs = new ArrayList<SolrInputDocument>(MAX_DOCS_PER_ADD);
@@ -111,23 +113,35 @@ public class SolrOutputFormat implements OutputFormat<Tuple, Tuple> {
 
             try {
                 flushInputDocuments(true);
-                
                 _coreContainer.shutdown();
                 _solrServer = null;
-                
-                File indexDir = new File(_localIndexDir, "index");
-                LOGGER.info(String.format("Copying index from %s to %s", _localIndexDir, _outputPath));
-                // HACK!!! Hadoop has a bug where a .crc file locally with the matching name will
-                // trigger an error, so we want to get rid of all such .crc files from inside of
-                // the index dir.
-                removeCrcFiles(indexDir);
-                
-                _outputFS.copyFromLocalFile(true, new Path(indexDir.getAbsolutePath()), _outputPath);
             } catch (SolrServerException e) {
                 throw new IOException(e);
             }
+            
+            // Finally we can copy the resulting index up to the target location in HDFS
+            copyToHDFS();
         }
 
+        private void copyToHDFS() throws IOException {
+            File indexDir = new File(_localIndexDir, "index");
+            LOGGER.info(String.format("Copying index from %s to %s", _localIndexDir, _outputPath));
+            
+            // HACK!!! Hadoop has a bug where a .crc file locally with the matching name will
+            // trigger an error, so we want to get rid of all such .crc files from inside of
+            // the index dir.
+            removeCrcFiles(indexDir);
+            
+            // Because we never write anything out, we need to tell Hadoop we're not hung.
+            Thread reporterThread = startProgressThread();
+
+            try {
+                _outputFS.copyFromLocalFile(true, new Path(indexDir.getAbsolutePath()), _outputPath);
+            } finally {
+                reporterThread.interrupt();
+            }
+        }
+        
         private void removeCrcFiles(File dir) {
             File[] crcFiles = dir.listFiles(new FilenameFilter() {
 
@@ -181,21 +195,7 @@ public class SolrOutputFormat implements OutputFormat<Tuple, Tuple> {
             if (force || (_inputDocs.size() >= MAX_DOCS_PER_ADD)) {
                 
                 // Because we never write anything out, we need to tell Hadoop we're not hung.
-                Thread reporterThread = new Thread() {
-                    @Override
-                    public void run() {
-                        while (!isInterrupted()) {
-                            _progress.progress();
-                            
-                            try {
-                                sleep(10 * 1000);
-                            } catch (InterruptedException e) {
-                                interrupt();
-                            }
-                        }
-                    }
-                };
-                reporterThread.start();
+                Thread reporterThread = startProgressThread();
 
                 try {
                     _solrServer.add(_inputDocs);
@@ -212,6 +212,30 @@ public class SolrOutputFormat implements OutputFormat<Tuple, Tuple> {
                 }
             }
         
+        }
+        
+        /**
+         * Fire off a thread that repeatedly calls Hadoop to tell it we're making progress.
+         * @return
+         */
+        private Thread startProgressThread() {
+            Thread result = new Thread() {
+                @Override
+                public void run() {
+                    while (!isInterrupted()) {
+                        _progress.progress();
+                        
+                        try {
+                            sleep(10 * 1000);
+                        } catch (InterruptedException e) {
+                            interrupt();
+                        }
+                    }
+                }
+            };
+            
+            result.start();
+            return result;
         }
         
     }

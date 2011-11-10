@@ -42,6 +42,7 @@ public class SolrScheme extends Scheme {
     }
     
     public SolrScheme(Fields schemeFields, String solrHomeDir, int maxSegments) throws IOException, ParserConfigurationException, SAXException {
+        
         // Verify solrHomeDir exists
         _solrHomeDir = new File(solrHomeDir);
         if (!_solrHomeDir.exists() || !_solrHomeDir.isDirectory()) {
