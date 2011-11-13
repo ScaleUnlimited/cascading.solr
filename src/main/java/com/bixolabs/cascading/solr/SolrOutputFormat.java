@@ -77,8 +77,6 @@ public class SolrOutputFormat implements OutputFormat<Tuple, Tuple> {
             _maxSegments = conf.getInt(MAX_SEGMENTS_KEY, DEFAULT_MAX_SEGMENTS);
             
             // This is where data will wind up, inside of an index subdir.
-            // We only need to do this if the output location isn't local - if it
-            // is, then we can write to it directly.
             _localIndexDir = new File(localSolrHome, "data");
 
             _inputDocs = new ArrayList<SolrInputDocument>(MAX_DOCS_PER_ADD);
@@ -86,7 +84,16 @@ public class SolrOutputFormat implements OutputFormat<Tuple, Tuple> {
             // Fire up an embedded Solr server
             try {
                 System.setProperty("solr.solr.home", localSolrHome.getAbsolutePath());
+
+                // TODO - we really want to parse the solrconfig.xml file, to find what's being used for
+                // the dataDir...or better yet, use our own since (I think) the schema should be completely
+                // decoupled - though some things like where to load libraries might matter, but that
+                // won't work distributed in any case.
+                //   <dataDir>${dataDir:}</dataDir>
+                // HACK - set common locations.
                 System.setProperty("solr.data.dir", _localIndexDir.getAbsolutePath());
+                System.setProperty("dataDir", _localIndexDir.getAbsolutePath());
+                
                 CoreContainer.Initializer initializer = new CoreContainer.Initializer();
                 _coreContainer = initializer.initialize();
                 _solrServer = new EmbeddedSolrServer(_coreContainer, "");

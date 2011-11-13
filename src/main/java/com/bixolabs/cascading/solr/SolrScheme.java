@@ -58,7 +58,16 @@ public class SolrScheme extends Scheme {
         tmpDataDir.mkdir();
         
         System.setProperty("solr.solr.home", _solrHomeDir.getAbsolutePath());
+        
+        // TODO - we really want to parse the solrconfig.xml file, to find what's being used for
+        // the dataDir...or better yet, use our own since (I think) the schema should be completely
+        // decoupled - though some things like where to load libraries might matter, but that
+        // won't work distributed in any case.
+        //   <dataDir>${dataDir:}</dataDir>
+        // HACK - set common locations.
         System.setProperty("solr.data.dir", tmpDataDir.getAbsolutePath());
+        System.setProperty("dataDir", tmpDataDir.getAbsolutePath());
+        
         CoreContainer.Initializer initializer = new CoreContainer.Initializer();
         CoreContainer coreContainer = null;
         
