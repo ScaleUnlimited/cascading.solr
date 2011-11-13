@@ -36,9 +36,10 @@ public class SolrOutputFormat implements OutputFormat<Tuple, Tuple> {
     public static final String SOLR_HOME_PATH_KEY = "com.bixolabs.cascading.solr.homePath";
     public static final String SINK_FIELDS_KEY = "com.bixolabs.cascading.solr.sinkFields";
     public static final String MAX_SEGMENTS_KEY = "com.bixolabs.cascading.solr.maxSegments";
+    public static final String DATA_DIR_PROPERTY_NAME_KEY = "com.bixolabs.cascading.solr.dataDirPropertyName";
 
     public static final int DEFAULT_MAX_SEGMENTS = 10;
-    
+
     private static class SolrRecordWriter implements RecordWriter<Tuple, Tuple> {
 
         // TODO KKr - make this configurable.
@@ -84,15 +85,7 @@ public class SolrOutputFormat implements OutputFormat<Tuple, Tuple> {
             // Fire up an embedded Solr server
             try {
                 System.setProperty("solr.solr.home", localSolrHome.getAbsolutePath());
-
-                // TODO - we really want to parse the solrconfig.xml file, to find what's being used for
-                // the dataDir...or better yet, use our own since (I think) the schema should be completely
-                // decoupled - though some things like where to load libraries might matter, but that
-                // won't work distributed in any case.
-                //   <dataDir>${dataDir:}</dataDir>
-                // HACK - set common locations.
-                System.setProperty("solr.data.dir", _localIndexDir.getAbsolutePath());
-                System.setProperty("dataDir", _localIndexDir.getAbsolutePath());
+                System.setProperty(conf.get(DATA_DIR_PROPERTY_NAME_KEY), _localIndexDir.getAbsolutePath());
                 
                 CoreContainer.Initializer initializer = new CoreContainer.Initializer();
                 _coreContainer = initializer.initialize();

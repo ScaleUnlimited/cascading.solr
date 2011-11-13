@@ -33,15 +33,22 @@ import cascading.util.Util;
 @SuppressWarnings("serial")
 public class SolrScheme extends Scheme {
 
+    public static final String DEFAULT_DATA_DIR_PROPERTY_NAME = "solr.data.dir";
+    
     private File _solrHomeDir;
     private Fields _schemeFields;
     private int _maxSegments;
+    private String _dataDirPropertyName;
     
     public SolrScheme(Fields schemeFields, String solrHomeDir) throws IOException, ParserConfigurationException, SAXException {
         this(schemeFields, solrHomeDir, SolrOutputFormat.DEFAULT_MAX_SEGMENTS);
     }
     
     public SolrScheme(Fields schemeFields, String solrHomeDir, int maxSegments) throws IOException, ParserConfigurationException, SAXException {
+        this(schemeFields, solrHomeDir, SolrOutputFormat.DEFAULT_MAX_SEGMENTS, DEFAULT_DATA_DIR_PROPERTY_NAME);
+    }
+    
+    public SolrScheme(Fields schemeFields, String solrHomeDir, int maxSegments, String dataDirPropertyName) throws IOException, ParserConfigurationException, SAXException {
         
         // Verify solrHomeDir exists
         _solrHomeDir = new File(solrHomeDir);
@@ -50,6 +57,7 @@ public class SolrScheme extends Scheme {
         }
         
         _maxSegments = maxSegments;
+        _dataDirPropertyName = dataDirPropertyName;
         
         // Set up a temp location for data, so when we instantiate the coreContainer,
         // we don't pollute the solr home with a /data sub-dir.
@@ -58,15 +66,7 @@ public class SolrScheme extends Scheme {
         tmpDataDir.mkdir();
         
         System.setProperty("solr.solr.home", _solrHomeDir.getAbsolutePath());
-        
-        // TODO - we really want to parse the solrconfig.xml file, to find what's being used for
-        // the dataDir...or better yet, use our own since (I think) the schema should be completely
-        // decoupled - though some things like where to load libraries might matter, but that
-        // won't work distributed in any case.
-        //   <dataDir>${dataDir:}</dataDir>
-        // HACK - set common locations.
-        System.setProperty("solr.data.dir", tmpDataDir.getAbsolutePath());
-        System.setProperty("dataDir", tmpDataDir.getAbsolutePath());
+        System.setProperty(_dataDirPropertyName, tmpDataDir.getAbsolutePath());
         
         CoreContainer.Initializer initializer = new CoreContainer.Initializer();
         CoreContainer coreContainer = null;
@@ -143,6 +143,7 @@ public class SolrScheme extends Scheme {
         
         conf.set(SolrOutputFormat.SOLR_HOME_PATH_KEY, hdfsSolrHomeDir.toString());
         conf.setInt(SolrOutputFormat.MAX_SEGMENTS_KEY, _maxSegments);
+        conf.set(SolrOutputFormat.DATA_DIR_PROPERTY_NAME_KEY, _dataDirPropertyName);
     }
 
     @Override
