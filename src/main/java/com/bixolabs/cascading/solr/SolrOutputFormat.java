@@ -193,8 +193,7 @@ public class SolrOutputFormat implements OutputFormat<Tuple, Tuple> {
         }
         
         private void flushInputDocuments(boolean force) throws SolrServerException, IOException {
-
-            if (force || (_inputDocs.size() >= MAX_DOCS_PER_ADD)) {
+            if ((force && (_inputDocs.size() > 0)) || (_inputDocs.size() >= MAX_DOCS_PER_ADD)) {
                 
                 // Because we never write anything out, we need to tell Hadoop we're not hung.
                 Thread reporterThread = startProgressThread();
