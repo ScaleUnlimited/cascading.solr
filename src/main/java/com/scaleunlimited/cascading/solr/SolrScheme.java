@@ -1,4 +1,4 @@
-package com.bixolabs.cascading.solr;
+package com.scaleunlimited.cascading.solr;
 
 import java.io.File;
 import java.io.IOException;
@@ -15,28 +15,29 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapred.FileOutputFormat;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.OutputCollector;
+import org.apache.hadoop.mapred.RecordReader;
 import org.apache.solr.core.CoreContainer;
 import org.apache.solr.core.SolrCore;
 import org.apache.solr.schema.IndexSchema;
 import org.apache.solr.schema.SchemaField;
 import org.xml.sax.SAXException;
 
+import cascading.flow.FlowProcess;
+import cascading.flow.hadoop.util.HadoopUtil;
 import cascading.scheme.Scheme;
+import cascading.scheme.SinkCall;
+import cascading.scheme.SourceCall;
 import cascading.tap.Tap;
 import cascading.tap.TapException;
 import cascading.tuple.Fields;
 import cascading.tuple.Tuple;
-import cascading.tuple.TupleEntry;
-import cascading.tuple.Tuples;
-import cascading.util.Util;
 
 @SuppressWarnings("serial")
-public class SolrScheme extends Scheme {
+public class SolrScheme extends Scheme<JobConf, RecordReader<Tuple, Tuple>, OutputCollector<Tuple, Tuple>, Object[], Void> {
 
     public static final String DEFAULT_DATA_DIR_PROPERTY_NAME = "solr.data.dir";
     
     private File _solrHomeDir;
-    private Fields _schemeFields;
     private int _maxSegments;
     private String _dataDirPropertyName;
     
@@ -49,7 +50,8 @@ public class SolrScheme extends Scheme {
     }
     
     public SolrScheme(Fields schemeFields, String solrHomeDir, int maxSegments, String dataDirPropertyName) throws IOException, ParserConfigurationException, SAXException {
-        
+        super(schemeFields, schemeFields);
+
         // Verify solrHomeDir exists
         _solrHomeDir = new File(solrHomeDir);
         if (!_solrHomeDir.exists() || !_solrHomeDir.isDirectory()) {
@@ -99,8 +101,6 @@ public class SolrScheme extends Scheme {
                     throw new TapException("No sink field name for required Solr field: " + solrFieldname);
                 }
             }
-
-            _schemeFields = schemeFields;
         } finally {
             if (coreContainer != null) {
                 coreContainer.shutdown();
@@ -108,18 +108,13 @@ public class SolrScheme extends Scheme {
         }
     }
     
-    
-    @SuppressWarnings("unchecked")
     @Override
-    public void sink(TupleEntry tupleEntry, OutputCollector outputCollector) throws IOException {
-        Tuple result = getSinkFields() != null ? tupleEntry.selectTuple(getSinkFields()) : tupleEntry.getTuple();
-        outputCollector.collect(Tuples.NULL, result);
+    public void sourceConfInit(FlowProcess<JobConf> flowProcess, Tap<JobConf, RecordReader<Tuple, Tuple>, OutputCollector<Tuple, Tuple>> tap, JobConf conf) {
+        throw new TapException("SolrScheme can only be used as a sink, not a source");
     }
 
-    @SuppressWarnings("deprecation")
     @Override
-    public void sinkInit(Tap tap, JobConf conf) throws IOException {
-        
+    public void sinkConfInit(FlowProcess<JobConf> flowProcess, Tap<JobConf, RecordReader<Tuple, Tuple>, OutputCollector<Tuple, Tuple>> tap, JobConf conf) {
         // Pick temp location in HDFS for conf files.
         // TODO KKr - do I need to worry about multiple sinks getting initialized,
         // and thus copying over each other?
@@ -128,33 +123,35 @@ public class SolrScheme extends Scheme {
         Path hdfsSolrHomeDir = new Path(outputPath, "_tempsolr/solr-home");
         
         // Copy Solr conf into HDFS.
-        FileSystem fs = hdfsSolrHomeDir.getFileSystem(conf);
-        fs.copyFromLocalFile(new Path(_solrHomeDir.getAbsolutePath()), hdfsSolrHomeDir);
+        try {
+            FileSystem fs = hdfsSolrHomeDir.getFileSystem(conf);
+            fs.copyFromLocalFile(new Path(_solrHomeDir.getAbsolutePath()), hdfsSolrHomeDir);
+        } catch (IOException e) {
+            throw new TapException("Can't copy Solr conf into HDFS", e);
+        }
 
         conf.setOutputKeyClass(Tuple.class);
         conf.setOutputValueClass(Tuple.class);
         conf.setOutputFormat(SolrOutputFormat.class);
-        
-        if (getSinkFields() == Fields.ALL) {
-            conf.set(SolrOutputFormat.SINK_FIELDS_KEY, Util.serializeBase64(_schemeFields));
-        } else {
-            conf.set(SolrOutputFormat.SINK_FIELDS_KEY, Util.serializeBase64(getSinkFields()));
+
+        try {
+            conf.set(SolrOutputFormat.SINK_FIELDS_KEY, HadoopUtil.serializeBase64(getSinkFields(), conf));
+        } catch (IOException e) {
+            throw new TapException("Can't serialize sink fields", e);
         }
-        
+
         conf.set(SolrOutputFormat.SOLR_HOME_PATH_KEY, hdfsSolrHomeDir.toString());
         conf.setInt(SolrOutputFormat.MAX_SEGMENTS_KEY, _maxSegments);
         conf.set(SolrOutputFormat.DATA_DIR_PROPERTY_NAME_KEY, _dataDirPropertyName);
     }
 
     @Override
-    public Tuple source(Object key, Object value) {
+    public boolean source(FlowProcess<JobConf> conf, SourceCall<Object[], RecordReader<Tuple, Tuple>> sourceCall) throws IOException {
         throw new TapException("SolrScheme can only be used as a sink, not a source");
     }
 
-    @SuppressWarnings("deprecation")
     @Override
-    public void sourceInit(Tap tap, JobConf conf) throws IOException {
-        throw new TapException("SolrScheme can only be used as a sink, not a source");
+    public void sink(FlowProcess<JobConf> flowProcess, SinkCall<Void, OutputCollector<Tuple, Tuple>> sinkCall) throws IOException {
+        sinkCall.getOutput().collect(Tuple.NULL, sinkCall.getOutgoingEntry().getTuple());
     }
-
 }

@@ -1,4 +1,4 @@
-package com.bixolabs.cascading.solr;
+package com.scaleunlimited.cascading.solr;
 
 import java.io.File;
 import java.io.FilenameFilter;
@@ -12,7 +12,6 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapred.FileOutputFormat;
 import org.apache.hadoop.mapred.JobConf;
-import org.apache.hadoop.mapred.OutputFormat;
 import org.apache.hadoop.mapred.RecordWriter;
 import org.apache.hadoop.mapred.Reporter;
 import org.apache.hadoop.util.Progressable;
@@ -26,12 +25,11 @@ import org.apache.solr.common.SolrInputDocument;
 import org.apache.solr.common.params.UpdateParams;
 import org.apache.solr.core.CoreContainer;
 
+import cascading.flow.hadoop.util.HadoopUtil;
 import cascading.tuple.Fields;
 import cascading.tuple.Tuple;
-import cascading.util.Util;
 
-@SuppressWarnings("deprecation")
-public class SolrOutputFormat implements OutputFormat<Tuple, Tuple> {
+public class SolrOutputFormat extends FileOutputFormat<Tuple, Tuple> {
     private static final Logger LOGGER = Logger.getLogger(SolrOutputFormat.class);
     
     public static final String SOLR_HOME_PATH_KEY = "com.bixolabs.cascading.solr.homePath";
@@ -74,7 +72,7 @@ public class SolrOutputFormat implements OutputFormat<Tuple, Tuple> {
             _outputFS = _outputPath.getFileSystem(conf);
 
             // Get the set of fields we're indexing.
-            _sinkFields = (Fields)Util.deserializeBase64(conf.get(SINK_FIELDS_KEY));
+            _sinkFields = HadoopUtil.deserializeBase64(conf.get(SINK_FIELDS_KEY), conf, Fields.class);
             
             _maxSegments = conf.getInt(MAX_SEGMENTS_KEY, DEFAULT_MAX_SEGMENTS);
             
@@ -160,14 +158,13 @@ public class SolrOutputFormat implements OutputFormat<Tuple, Tuple> {
             }
         }
         
-        @SuppressWarnings("unchecked")
         @Override
         public void write(Tuple key, Tuple value) throws IOException {
             SolrInputDocument doc = new SolrInputDocument();
             
             for (int i = 0; i < _sinkFields.size(); i++) {
                 String name = (String)_sinkFields.get(i);
-                Comparable fieldValue = value.get(i);
+                Object fieldValue = value.getObject(i);
                 if (fieldValue == null) {
                     // Don't add null values.
                 } else if (fieldValue instanceof Tuple) {

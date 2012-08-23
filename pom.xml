@@ -3,27 +3,28 @@
     xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
       
     <modelVersion>4.0.0</modelVersion>
-    <groupId>com.bixolabs</groupId>
+    <groupId>com.scaleunlimited</groupId>
 	<artifactId>cascading.solr</artifactId>
 	<name>Cascading Scheme for Apache Solr</name>
 	<packaging>jar</packaging>
-	<version>1.0-SNAPSHOT</version>
+	<version>2.0-SNAPSHOT</version>
 	<description>Cascading Scheme for creating Lucene indexes using Solr</description>
-	<url>http://github.com/bixolabs/cascading.solr</url>
+	<url>http://github.com/ScaleUnlimited/cascading.solr</url>
 	<issueManagement>
 		<system>GitHub</system>
-		<url>http://github.com/bixolabs/cascading.solr/issues</url>
+		<url>http://github.com/ScaleUnlimited/cascading.solr/issues</url>
 	</issueManagement>
 	<scm>
-		<connection>scm:git:git://github.com/bixolabs/cascading.solr.git</connection>
-		<developerConnection>TransPac Software, Inc.</developerConnection>
-		<url>https://github.com/bixolabs/cascading.solr/</url>
+		<connection>scm:git:git://github.com/ScaleUnlimited/cascading.solr.git</connection>
+		<developerConnection>Scale Unlimited</developerConnection>
+		<url>https://github.com/ScaleUnlimited/cascading.solr/</url>
 	</scm>
 	<organization>
-		<name>Bixo Labs</name>
-		<url>http://bixolabs.com</url>
+		<name>Scale Unlimited</name>
+		<url>http://www.scaleunlimited.com</url>
 	</organization>
 	<repositories>
+	    <!-- for ant-eclipse jar -->
 		<repository>
 			<id>Bixo</id>
 			<name>Bixo GitHub repository</name>
@@ -35,49 +36,45 @@
 		<dependency>
             <groupId>org.apache.hadoop</groupId>
             <artifactId>hadoop-core</artifactId>
-            <version>0.20.2</version>
+            <version>1.0.3</version>
             <scope>provided</scope>
-            <exclusions>
-            	<exclusion>
-            		<artifactId>commons-httpclient</artifactId>
-            		<groupId>commons-httpclient</groupId>
-            	</exclusion>
-            	<exclusion>
-            		<artifactId>jasper</artifactId>
-            		<groupId>org.apache.tomcat</groupId>
-            	</exclusion>
-            </exclusions>
         </dependency>
         
 		<dependency>
             <groupId>cascading</groupId>
             <artifactId>cascading-core</artifactId>
-            <version>1.2.1</version>
+            <version>2.0.4</version>
+        </dependency>
+        
+		<dependency>
+            <groupId>cascading</groupId>
+            <artifactId>cascading-hadoop</artifactId>
+            <version>2.0.4</version>
         </dependency>
         
 		<dependency>
             <groupId>org.apache.solr</groupId>
             <artifactId>solr-core</artifactId>
-            <version>3.1.0</version>
+            <version>3.6.1</version>
         </dependency>
         
 		<dependency>
             <groupId>log4j</groupId>
             <artifactId>log4j</artifactId>
-            <version>1.2.14</version>
+            <version>1.2.17</version>
         </dependency>
         
 		<dependency>
             <groupId>junit</groupId>
             <artifactId>junit</artifactId>
-            <version>4.7</version>
+            <version>4.10</version>
             <scope>test</scope>
         </dependency>
 
 		<dependency>
             <groupId>org.mockito</groupId>
             <artifactId>mockito-core</artifactId>
-            <version>1.8.0</version>
+            <version>1.9.0</version>
             <scope>test</scope>
         </dependency>
 

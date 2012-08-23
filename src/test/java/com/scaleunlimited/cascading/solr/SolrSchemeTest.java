@@ -1,4 +1,4 @@
-package com.bixolabs.cascading.solr;
+package com.scaleunlimited.cascading.solr;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
@@ -7,7 +7,6 @@ import java.io.File;
 import java.io.IOException;
 
 import org.apache.commons.io.FileUtils;
-import org.apache.hadoop.mapred.JobConf;
 import org.apache.solr.client.solrj.SolrServer;
 import org.apache.solr.client.solrj.embedded.EmbeddedSolrServer;
 import org.apache.solr.client.solrj.response.QueryResponse;
@@ -18,13 +17,14 @@ import org.junit.Before;
 import org.junit.Test;
 
 import cascading.flow.Flow;
-import cascading.flow.FlowConnector;
+import cascading.flow.hadoop.HadoopFlowConnector;
+import cascading.flow.hadoop.HadoopFlowProcess;
 import cascading.pipe.Pipe;
-import cascading.scheme.SequenceFile;
-import cascading.tap.Lfs;
+import cascading.scheme.hadoop.SequenceFile;
 import cascading.tap.SinkMode;
 import cascading.tap.Tap;
 import cascading.tap.TapException;
+import cascading.tap.hadoop.Lfs;
 import cascading.tuple.Fields;
 import cascading.tuple.Tuple;
 import cascading.tuple.TupleEntryCollector;
@@ -83,6 +83,23 @@ public class SolrSchemeTest {
     }
     
     @Test
+    public void testIndexSink() throws Exception {
+        final Fields testFields = new Fields("id", "host", "url", "title", "content", "type");
+        String out = "build/test/SolrSchemeTest/testIndexSink/out";
+
+        final String solrHome = SOLR_HOME_NUTCH;
+        Lfs solrSink = new Lfs(new SolrScheme(testFields, solrHome), out, SinkMode.REPLACE);
+        
+        TupleEntryCollector writer = solrSink.openForWrite(new HadoopFlowProcess());
+
+        for (int i = 0; i < 100; i++) {
+            writer.add(new Tuple("http://domain.com", "domain.com", "http://domain.com", "Title", "content", "html/text"));
+        }
+
+        writer.close();
+    }
+
+    @Test
     public void testSimpleIndexing() throws Exception {
         final Fields testFields = new Fields("id", "host", "url", "title", "content", "type");
 
@@ -90,7 +107,7 @@ public class SolrSchemeTest {
         final String out = TEST_DIR + "testSimpleIndexing/out";
 
         Lfs lfsSource = new Lfs(new SequenceFile(testFields), in, SinkMode.REPLACE);
-        TupleEntryCollector write = lfsSource.openForWrite(new JobConf());
+        TupleEntryCollector write = lfsSource.openForWrite(new HadoopFlowProcess());
         Tuple t = new Tuple();
         t.add("http://domain.com/page.html");
         t.add("domain.com");
@@ -114,8 +131,8 @@ public class SolrSchemeTest {
         Pipe writePipe = new Pipe("tuples to Solr");
 
         final String solrHome = SOLR_HOME_NUTCH;
-        Tap solrSink = new Lfs(new SolrScheme(testFields, solrHome), out);
-        Flow flow = new FlowConnector().connect(lfsSource, solrSink, writePipe);
+        Lfs solrSink = new Lfs(new SolrScheme(testFields, solrHome), out);
+        Flow flow = new HadoopFlowConnector().connect(lfsSource, solrSink, writePipe);
         flow.complete();
 
         // Open up the Solr index, and do some searches.
@@ -153,7 +170,7 @@ public class SolrSchemeTest {
         final String out = TEST_DIR + "testSolr31Indexing/out";
 
         Lfs lfsSource = new Lfs(new SequenceFile(testFields), in, SinkMode.REPLACE);
-        TupleEntryCollector write = lfsSource.openForWrite(new JobConf());
+        TupleEntryCollector write = lfsSource.openForWrite(new HadoopFlowProcess());
         Tuple t = new Tuple();
         t.add("1");
         t.add("name1");
@@ -170,7 +187,7 @@ public class SolrSchemeTest {
 
         final String solrHome = SOLR_HOME_31;
         Tap solrSink = new Lfs(new SolrScheme(testFields, solrHome), out);
-        Flow flow = new FlowConnector().connect(lfsSource, solrSink, writePipe);
+        Flow flow = new HadoopFlowConnector().connect(lfsSource, solrSink, writePipe);
         flow.complete();
 
         // Open up the Solr index, and do some searches.
