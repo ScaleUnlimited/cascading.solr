@@ -7,6 +7,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
+import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapred.FileOutputFormat;
@@ -127,7 +128,6 @@ public class SolrOutputFormat implements OutputFormat<Tuple, Tuple> {
 
         private void copyToHDFS() throws IOException {
             File indexDir = new File(_localIndexDir, "index");
-            LOGGER.info(String.format("Copying index from %s to %s", _localIndexDir, _outputPath));
             
             // HACK!!! Hadoop has a bug where a .crc file locally with the matching name will
             // trigger an error, so we want to get rid of all such .crc files from inside of
@@ -138,6 +138,8 @@ public class SolrOutputFormat implements OutputFormat<Tuple, Tuple> {
             Thread reporterThread = startProgressThread();
 
             try {
+                long indexSize = FileUtils.sizeOfDirectory(indexDir);
+                LOGGER.info(String.format("Copying %d bytes of index from %s to %s", indexSize, _localIndexDir, _outputPath));
                 _outputFS.copyFromLocalFile(true, new Path(indexDir.getAbsolutePath()), _outputPath);
             } finally {
                 reporterThread.interrupt();
@@ -174,7 +176,7 @@ public class SolrOutputFormat implements OutputFormat<Tuple, Tuple> {
                         safeAdd(doc, name, list.getObject(j).toString());
                     }
                 } else {
-                    safeAdd(doc, name, "" + fieldValue.toString());
+                    safeAdd(doc, name, fieldValue.toString());
                 }
             }
 
