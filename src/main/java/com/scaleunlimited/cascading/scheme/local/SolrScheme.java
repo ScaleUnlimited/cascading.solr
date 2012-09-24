@@ -25,33 +25,26 @@ import cascading.scheme.SinkCall;
 import cascading.scheme.SourceCall;
 import cascading.tap.Tap;
 import cascading.tap.TapException;
-import cascading.tap.local.FileTap;
 import cascading.tuple.Fields;
-import cascading.tuple.Tuple;
-import cascading.util.Util;
+
+import com.scaleunlimited.cascading.local.DirectoryFileOutputStream;
 
 @SuppressWarnings("serial")
 public class SolrScheme extends Scheme<Properties, InputStream, OutputStream, Void, SolrCollector> {
 
-    public static final int DEFAULT_MAX_SEGMENTS = 1;
-
+    public static final int DEFAULT_DEFAULT_MAX_SEGMENTS = 1;
     public static final String DEFAULT_DATA_DIR_PROPERTY_NAME = "solr.data.dir";
     
-    private static final String SOLR_HOME_PATH_KEY = "com.scaleunlimited.cascading.solr.homePath";
-    private static final String SINK_FIELDS_KEY = "com.scaleunlimited.cascading.solr.sinkFields";
-    private static final String MAX_SEGMENTS_KEY = "com.scaleunlimited.cascading.solr.maxSegments";
-    private static final String DATA_DIR_PROPERTY_NAME_KEY = "com.scaleunlimited.cascading.solr.dataDirPropertyName";
-
     private File _solrHomeDir;
     private int _maxSegments;
     private String _dataDirPropertyName;
     
     public SolrScheme(Fields schemeFields, String solrHomeDir) throws IOException, ParserConfigurationException, SAXException {
-        this(schemeFields, solrHomeDir, DEFAULT_MAX_SEGMENTS);
+        this(schemeFields, solrHomeDir, DEFAULT_DEFAULT_MAX_SEGMENTS);
     }
     
     public SolrScheme(Fields schemeFields, String solrHomeDir, int maxSegments) throws IOException, ParserConfigurationException, SAXException {
-        this(schemeFields, solrHomeDir, DEFAULT_MAX_SEGMENTS, DEFAULT_DATA_DIR_PROPERTY_NAME);
+        this(schemeFields, solrHomeDir, DEFAULT_DEFAULT_MAX_SEGMENTS, DEFAULT_DATA_DIR_PROPERTY_NAME);
     }
     
     public SolrScheme(Fields schemeFields, String solrHomeDir, int maxSegments, String dataDirPropertyName) throws IOException, ParserConfigurationException, SAXException {
@@ -119,36 +112,28 @@ public class SolrScheme extends Scheme<Properties, InputStream, OutputStream, Vo
     }
 
     @Override
-    public void sinkConfInit(FlowProcess<Properties> flowProcess, Tap<Properties, InputStream, OutputStream> tap, Properties conf) {
-        // Stash various settings in our conf
-        // TODO verify that I really need to do this, versus using class members directly.
-        
-        conf.setProperty(SOLR_HOME_PATH_KEY, _solrHomeDir.getAbsolutePath());
-        conf.setProperty(MAX_SEGMENTS_KEY, "" + _maxSegments);
-        conf.setProperty(DATA_DIR_PROPERTY_NAME_KEY, _dataDirPropertyName);
-        
-        if (!(tap instanceof FileTap)) {
-            throw new TapException("SolrScheme can only be used with a FileTap in local mode");
-        }
-        
-        FileTap ft = (FileTap)tap;
-        ft.get
-    }
-
-    @Override
     public boolean source(FlowProcess<Properties> conf, SourceCall<Void, InputStream> sourceCall) throws IOException {
         throw new TapException("SolrScheme can only be used as a sink, not a source");
     }
 
     @Override
     public void sinkPrepare(FlowProcess<Properties> flowProcess, SinkCall<SolrCollector, OutputStream> sinkCall) throws IOException {
-        //Set context to be the embedded solr server (or rather a wrapper for it, that handles caching)
-        String solrHomeDir = flowProcess.getStringProperty(SOLR_HOME_PATH_KEY);
-        int maxSegments = Integer.parseInt(flowProcess.getStringProperty(MAX_SEGMENTS_KEY));
-        String dataDirPropertyName = flowProcess.getStringProperty(DATA_DIR_PROPERTY_NAME_KEY);
+        if (!(sinkCall.getOutput() instanceof DirectoryFileOutputStream)) {
+            throw new TapException("SolrScheme can only be used with a DirectoryTap in local mode");
+        }
         
-        SolrCollector collector = new SolrCollector(flowProcess, solrHomeDir, dataDirPropertyName, dataDir);
+        DirectoryFileOutputStream os = (DirectoryFileOutputStream)sinkCall.getOutput();
+        String path = os.asDirectory();
+
+        // Set context to be the embedded solr server (or rather a wrapper for it, that handles caching)
+        // TODO this call gets made BEFORE sinkConfInit, so I don't have the _dataDir set up at this point, which seems wrong.
+        SolrCollector collector = new SolrCollector(flowProcess, getSinkFields(), _solrHomeDir.getAbsolutePath(), _maxSegments, _dataDirPropertyName, path);
         sinkCall.setContext(collector);
+    }
+    
+    @Override
+    public void sinkConfInit(FlowProcess<Properties> flowProcess, Tap<Properties, InputStream, OutputStream> tap, Properties conf) {
+        // TODO What would I want to do here, if anything?
     }
     
     @Override
@@ -161,4 +146,5 @@ public class SolrScheme extends Scheme<Properties, InputStream, OutputStream, Vo
         SolrCollector collector = sinkCall.getContext();
         collector.cleanup();
     }
+
 }

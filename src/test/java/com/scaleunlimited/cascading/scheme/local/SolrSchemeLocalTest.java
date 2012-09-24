@@ -1,4 +1,4 @@
-package com.scaleunlimited.cascading.scheme.hadoop;
+package com.scaleunlimited.cascading.scheme.local;
 
 import java.io.File;
 import java.io.IOException;
@@ -14,24 +14,23 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
-import com.scaleunlimited.cascading.scheme.hadoop.SolrScheme;
-
 import cascading.flow.Flow;
-import cascading.flow.hadoop.HadoopFlowConnector;
-import cascading.flow.hadoop.HadoopFlowProcess;
+import cascading.flow.local.LocalFlowConnector;
+import cascading.flow.local.LocalFlowProcess;
 import cascading.pipe.Pipe;
-import cascading.scheme.hadoop.SequenceFile;
 import cascading.tap.SinkMode;
-import cascading.tap.Tap;
 import cascading.tap.TapException;
-import cascading.tap.hadoop.Lfs;
+import cascading.tap.local.FileTap;
 import cascading.tuple.Fields;
 import cascading.tuple.Tuple;
 import cascading.tuple.TupleEntryCollector;
 
-public class SolrSchemeTest extends Assert {
+import com.scaleunlimited.cascading.local.DirectoryTap;
+import com.scaleunlimited.cascading.local.KryoScheme;
 
-    private static final String TEST_DIR = "build/test/SolrSchemeTest/";
+public class SolrSchemeLocalTest extends Assert {
+
+    private static final String TEST_DIR = "build/test/SolrSchemeLocalTest/";
     private static final String SOLR_HOME_NUTCH = "src/test/resources/solr-home-nutch/"; 
     private static final String SOLR_HOME_31 = "src/test/resources/solr-home-3.1/"; 
     
@@ -85,12 +84,12 @@ public class SolrSchemeTest extends Assert {
     @Test
     public void testIndexSink() throws Exception {
         final Fields testFields = new Fields("id", "host", "url", "title", "content", "type");
-        String out = "build/test/SolrSchemeTest/testIndexSink/out";
+        String out = TEST_DIR + "testIndexSink/out";
 
         final String solrHome = SOLR_HOME_NUTCH;
-        Lfs solrSink = new Lfs(new SolrScheme(testFields, solrHome), out, SinkMode.REPLACE);
+        DirectoryTap solrSink = new DirectoryTap(new SolrScheme(testFields, solrHome), out, SinkMode.REPLACE);
         
-        TupleEntryCollector writer = solrSink.openForWrite(new HadoopFlowProcess());
+        TupleEntryCollector writer = solrSink.openForWrite(new LocalFlowProcess());
 
         for (int i = 0; i < 100; i++) {
             writer.add(new Tuple("http://domain.com", "domain.com", "http://domain.com", "Title", "content", "html/text"));
@@ -106,8 +105,8 @@ public class SolrSchemeTest extends Assert {
         final String in = TEST_DIR + "testSimpleIndexing/in";
         final String out = TEST_DIR + "testSimpleIndexing/out";
 
-        Lfs lfsSource = new Lfs(new SequenceFile(testFields), in, SinkMode.REPLACE);
-        TupleEntryCollector write = lfsSource.openForWrite(new HadoopFlowProcess());
+        FileTap localSource = new FileTap(new KryoScheme(testFields), in, SinkMode.REPLACE);
+        TupleEntryCollector write = localSource.openForWrite(new LocalFlowProcess());
         Tuple t = new Tuple();
         t.add("http://domain.com/page.html");
         t.add("domain.com");
@@ -131,8 +130,8 @@ public class SolrSchemeTest extends Assert {
         Pipe writePipe = new Pipe("tuples to Solr");
 
         final String solrHome = SOLR_HOME_NUTCH;
-        Lfs solrSink = new Lfs(new SolrScheme(testFields, solrHome), out);
-        Flow flow = new HadoopFlowConnector().connect(lfsSource, solrSink, writePipe);
+        DirectoryTap solrSink = new DirectoryTap(new SolrScheme(testFields, solrHome), out);
+        Flow flow = new LocalFlowConnector().connect(localSource, solrSink, writePipe);
         flow.complete();
 
         // Open up the Solr index, and do some searches.
@@ -169,8 +168,8 @@ public class SolrSchemeTest extends Assert {
         final String in = TEST_DIR + "testSolr31Indexing/in";
         final String out = TEST_DIR + "testSolr31Indexing/out";
 
-        Lfs lfsSource = new Lfs(new SequenceFile(testFields), in, SinkMode.REPLACE);
-        TupleEntryCollector write = lfsSource.openForWrite(new HadoopFlowProcess());
+        FileTap sourceTap = new FileTap(new KryoScheme(testFields), in, SinkMode.REPLACE);
+        TupleEntryCollector write = sourceTap.openForWrite(new LocalFlowProcess());
         Tuple t = new Tuple();
         t.add("1");
         t.add("name1");
@@ -186,8 +185,8 @@ public class SolrSchemeTest extends Assert {
         Pipe writePipe = new Pipe("tuples to Solr");
 
         final String solrHome = SOLR_HOME_31;
-        Tap solrSink = new Lfs(new SolrScheme(testFields, solrHome), out);
-        Flow flow = new HadoopFlowConnector().connect(lfsSource, solrSink, writePipe);
+        DirectoryTap solrSink = new DirectoryTap(new SolrScheme(testFields, solrHome), out);
+        Flow flow = new LocalFlowConnector().connect(sourceTap, solrSink, writePipe);
         flow.complete();
 
         // Open up the Solr index, and do some searches.

@@ -23,22 +23,27 @@ public class SolrCollector {
     // TODO KKr - make this configurable.
     private static final int MAX_DOCS_PER_ADD = 500;
 
-    private CoreContainer _coreContainer;
-    private SolrServer _solrServer;
+    private FlowProcess<Properties> _flowProcess;
     private Fields _sinkFields;
     private int _maxSegments;
-    private List<SolrInputDocument> _inputDocs;
-    private FlowProcess<Properties> _flowProcess;
+    private String _dataDirPropertyName;
     
-    public SolrCollector(FlowProcess<Properties> flowProcess, String solrHome, String dataDirPropertyName, String dataDir) throws IOException {
+    private transient CoreContainer _coreContainer;
+    private transient SolrServer _solrServer;
+    private transient List<SolrInputDocument> _inputDocs;
+
+    public SolrCollector(FlowProcess<Properties> flowProcess, Fields sinkFields, String solrHome, int maxSegments, String dataDirPropertyName, String dataDir) throws IOException {
         _flowProcess = flowProcess;
+        _sinkFields = sinkFields;
+        _maxSegments = maxSegments;
+        _dataDirPropertyName = dataDirPropertyName;
+        
         _inputDocs = new ArrayList<SolrInputDocument>(MAX_DOCS_PER_ADD);
 
         // Fire up an embedded Solr server
         try {
             System.setProperty("solr.solr.home", solrHome);
-            System.setProperty(dataDirPropertyName, dataDir);
-            
+            System.setProperty(_dataDirPropertyName, dataDir);
             CoreContainer.Initializer initializer = new CoreContainer.Initializer();
             _coreContainer = initializer.initialize();
             _solrServer = new EmbeddedSolrServer(_coreContainer, "");
