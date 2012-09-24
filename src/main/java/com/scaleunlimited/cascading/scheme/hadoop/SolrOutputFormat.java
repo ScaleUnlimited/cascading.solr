@@ -1,4 +1,4 @@
-package com.scaleunlimited.cascading.solr;
+package com.scaleunlimited.cascading.scheme.hadoop;
 
 import java.io.File;
 import java.io.FilenameFilter;
@@ -32,10 +32,10 @@ import cascading.tuple.Tuple;
 public class SolrOutputFormat extends FileOutputFormat<Tuple, Tuple> {
     private static final Logger LOGGER = Logger.getLogger(SolrOutputFormat.class);
     
-    public static final String SOLR_HOME_PATH_KEY = "com.bixolabs.cascading.solr.homePath";
-    public static final String SINK_FIELDS_KEY = "com.bixolabs.cascading.solr.sinkFields";
-    public static final String MAX_SEGMENTS_KEY = "com.bixolabs.cascading.solr.maxSegments";
-    public static final String DATA_DIR_PROPERTY_NAME_KEY = "com.bixolabs.cascading.solr.dataDirPropertyName";
+    public static final String SOLR_HOME_PATH_KEY = "com.scaleunlimited.cascading.solr.homePath";
+    public static final String SINK_FIELDS_KEY = "com.scaleunlimited.cascading.solr.sinkFields";
+    public static final String MAX_SEGMENTS_KEY = "com.scaleunlimited.cascading.solr.maxSegments";
+    public static final String DATA_DIR_PROPERTY_NAME_KEY = "com.scaleunlimited.cascading.solr.dataDirPropertyName";
 
     public static final int DEFAULT_MAX_SEGMENTS = 10;
 

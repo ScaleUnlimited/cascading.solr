@@ -1,21 +1,18 @@
-package com.scaleunlimited.cascading.solr;
+package com.scaleunlimited.cascading.scheme.local;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Map;
+import java.util.Properties;
 import java.util.Set;
 import java.util.UUID;
 
 import javax.xml.parsers.ParserConfigurationException;
 
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.mapred.FileOutputFormat;
-import org.apache.hadoop.mapred.JobConf;
-import org.apache.hadoop.mapred.OutputCollector;
-import org.apache.hadoop.mapred.RecordReader;
 import org.apache.solr.core.CoreContainer;
 import org.apache.solr.core.SolrCore;
 import org.apache.solr.schema.IndexSchema;
@@ -23,30 +20,38 @@ import org.apache.solr.schema.SchemaField;
 import org.xml.sax.SAXException;
 
 import cascading.flow.FlowProcess;
-import cascading.flow.hadoop.util.HadoopUtil;
 import cascading.scheme.Scheme;
 import cascading.scheme.SinkCall;
 import cascading.scheme.SourceCall;
 import cascading.tap.Tap;
 import cascading.tap.TapException;
+import cascading.tap.local.FileTap;
 import cascading.tuple.Fields;
 import cascading.tuple.Tuple;
+import cascading.util.Util;
 
 @SuppressWarnings("serial")
-public class SolrScheme extends Scheme<JobConf, RecordReader<Tuple, Tuple>, OutputCollector<Tuple, Tuple>, Object[], Void> {
+public class SolrScheme extends Scheme<Properties, InputStream, OutputStream, Void, SolrCollector> {
+
+    public static final int DEFAULT_MAX_SEGMENTS = 1;
 
     public static final String DEFAULT_DATA_DIR_PROPERTY_NAME = "solr.data.dir";
     
+    private static final String SOLR_HOME_PATH_KEY = "com.scaleunlimited.cascading.solr.homePath";
+    private static final String SINK_FIELDS_KEY = "com.scaleunlimited.cascading.solr.sinkFields";
+    private static final String MAX_SEGMENTS_KEY = "com.scaleunlimited.cascading.solr.maxSegments";
+    private static final String DATA_DIR_PROPERTY_NAME_KEY = "com.scaleunlimited.cascading.solr.dataDirPropertyName";
+
     private File _solrHomeDir;
     private int _maxSegments;
     private String _dataDirPropertyName;
     
     public SolrScheme(Fields schemeFields, String solrHomeDir) throws IOException, ParserConfigurationException, SAXException {
-        this(schemeFields, solrHomeDir, SolrOutputFormat.DEFAULT_MAX_SEGMENTS);
+        this(schemeFields, solrHomeDir, DEFAULT_MAX_SEGMENTS);
     }
     
     public SolrScheme(Fields schemeFields, String solrHomeDir, int maxSegments) throws IOException, ParserConfigurationException, SAXException {
-        this(schemeFields, solrHomeDir, SolrOutputFormat.DEFAULT_MAX_SEGMENTS, DEFAULT_DATA_DIR_PROPERTY_NAME);
+        this(schemeFields, solrHomeDir, DEFAULT_MAX_SEGMENTS, DEFAULT_DATA_DIR_PROPERTY_NAME);
     }
     
     public SolrScheme(Fields schemeFields, String solrHomeDir, int maxSegments, String dataDirPropertyName) throws IOException, ParserConfigurationException, SAXException {
@@ -109,49 +114,51 @@ public class SolrScheme extends Scheme<JobConf, RecordReader<Tuple, Tuple>, Outp
     }
     
     @Override
-    public void sourceConfInit(FlowProcess<JobConf> flowProcess, Tap<JobConf, RecordReader<Tuple, Tuple>, OutputCollector<Tuple, Tuple>> tap, JobConf conf) {
+    public void sourceConfInit(FlowProcess<Properties> flowProcess, Tap<Properties, InputStream, OutputStream> tap, Properties conf) {
         throw new TapException("SolrScheme can only be used as a sink, not a source");
     }
 
     @Override
-    public void sinkConfInit(FlowProcess<JobConf> flowProcess, Tap<JobConf, RecordReader<Tuple, Tuple>, OutputCollector<Tuple, Tuple>> tap, JobConf conf) {
-        // Pick temp location in HDFS for conf files.
-        // TODO KKr - do I need to worry about multiple sinks getting initialized,
-        // and thus copying over each other?
-        // TODO KKr - should I get rid of this temp directory when we're done?
-        Path outputPath = FileOutputFormat.getOutputPath(conf);
-        Path hdfsSolrHomeDir = new Path(outputPath, "_tempsolr/solr-home");
+    public void sinkConfInit(FlowProcess<Properties> flowProcess, Tap<Properties, InputStream, OutputStream> tap, Properties conf) {
+        // Stash various settings in our conf
+        // TODO verify that I really need to do this, versus using class members directly.
         
-        // Copy Solr conf into HDFS.
-        try {
-            FileSystem fs = hdfsSolrHomeDir.getFileSystem(conf);
-            fs.copyFromLocalFile(new Path(_solrHomeDir.getAbsolutePath()), hdfsSolrHomeDir);
-        } catch (IOException e) {
-            throw new TapException("Can't copy Solr conf into HDFS", e);
+        conf.setProperty(SOLR_HOME_PATH_KEY, _solrHomeDir.getAbsolutePath());
+        conf.setProperty(MAX_SEGMENTS_KEY, "" + _maxSegments);
+        conf.setProperty(DATA_DIR_PROPERTY_NAME_KEY, _dataDirPropertyName);
+        
+        if (!(tap instanceof FileTap)) {
+            throw new TapException("SolrScheme can only be used with a FileTap in local mode");
         }
-
-        conf.setOutputKeyClass(Tuple.class);
-        conf.setOutputValueClass(Tuple.class);
-        conf.setOutputFormat(SolrOutputFormat.class);
-
-        try {
-            conf.set(SolrOutputFormat.SINK_FIELDS_KEY, HadoopUtil.serializeBase64(getSinkFields(), conf));
-        } catch (IOException e) {
-            throw new TapException("Can't serialize sink fields", e);
-        }
-
-        conf.set(SolrOutputFormat.SOLR_HOME_PATH_KEY, hdfsSolrHomeDir.toString());
-        conf.setInt(SolrOutputFormat.MAX_SEGMENTS_KEY, _maxSegments);
-        conf.set(SolrOutputFormat.DATA_DIR_PROPERTY_NAME_KEY, _dataDirPropertyName);
+        
+        FileTap ft = (FileTap)tap;
+        ft.get
     }
 
     @Override
-    public boolean source(FlowProcess<JobConf> conf, SourceCall<Object[], RecordReader<Tuple, Tuple>> sourceCall) throws IOException {
+    public boolean source(FlowProcess<Properties> conf, SourceCall<Void, InputStream> sourceCall) throws IOException {
         throw new TapException("SolrScheme can only be used as a sink, not a source");
     }
 
     @Override
-    public void sink(FlowProcess<JobConf> flowProcess, SinkCall<Void, OutputCollector<Tuple, Tuple>> sinkCall) throws IOException {
-        sinkCall.getOutput().collect(Tuple.NULL, sinkCall.getOutgoingEntry().getTuple());
+    public void sinkPrepare(FlowProcess<Properties> flowProcess, SinkCall<SolrCollector, OutputStream> sinkCall) throws IOException {
+        //Set context to be the embedded solr server (or rather a wrapper for it, that handles caching)
+        String solrHomeDir = flowProcess.getStringProperty(SOLR_HOME_PATH_KEY);
+        int maxSegments = Integer.parseInt(flowProcess.getStringProperty(MAX_SEGMENTS_KEY));
+        String dataDirPropertyName = flowProcess.getStringProperty(DATA_DIR_PROPERTY_NAME_KEY);
+        
+        SolrCollector collector = new SolrCollector(flowProcess, solrHomeDir, dataDirPropertyName, dataDir);
+        sinkCall.setContext(collector);
+    }
+    
+    @Override
+    public void sink(FlowProcess<Properties> flowProcess, SinkCall<SolrCollector, OutputStream> sinkCall) throws IOException {
+        sinkCall.getContext().collect(sinkCall.getOutgoingEntry().getTuple());
+    }
+    
+    @Override
+    public void sinkCleanup(FlowProcess<Properties> flowProcess, SinkCall<SolrCollector, OutputStream> sinkCall) throws IOException {
+        SolrCollector collector = sinkCall.getContext();
+        collector.cleanup();
     }
 }

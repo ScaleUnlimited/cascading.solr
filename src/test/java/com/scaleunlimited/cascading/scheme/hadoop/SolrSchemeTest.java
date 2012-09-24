@@ -1,7 +1,4 @@
-package com.scaleunlimited.cascading.solr;
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
+package com.scaleunlimited.cascading.scheme.hadoop;
 
 import java.io.File;
 import java.io.IOException;
@@ -13,8 +10,11 @@ import org.apache.solr.client.solrj.response.QueryResponse;
 import org.apache.solr.common.params.CommonParams;
 import org.apache.solr.common.params.ModifiableSolrParams;
 import org.apache.solr.core.CoreContainer;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+
+import com.scaleunlimited.cascading.scheme.hadoop.SolrScheme;
 
 import cascading.flow.Flow;
 import cascading.flow.hadoop.HadoopFlowConnector;
@@ -29,7 +29,7 @@ import cascading.tuple.Fields;
 import cascading.tuple.Tuple;
 import cascading.tuple.TupleEntryCollector;
 
-public class SolrSchemeTest {
+public class SolrSchemeTest extends Assert {
 
     private static final String TEST_DIR = "build/test/SolrSchemeTest/";
     private static final String SOLR_HOME_NUTCH = "src/test/resources/solr-home-nutch/"; 
