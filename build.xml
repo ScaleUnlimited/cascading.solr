@@ -81,6 +81,7 @@
 		       optimize="${javac.optimize}"
 		       target="${javac.version}"
 		       source="${javac.version}"
+		       includeAntRuntime="false"
 		       deprecation="${javac.deprecation}">
 			<compilerarg line="${javac.args} ${javac.args.warnings}" />
 			<classpath refid="compile.classpath" />
@@ -106,6 +107,7 @@
 		       optimize="${javac.optimize}"
 		       target="${javac.version}"
 		       source="${javac.version}"
+		       includeAntRuntime="false"
 		       deprecation="${javac.deprecation}">
 			<compilerarg line="${javac.args} ${javac.args.warnings}" />
 			<classpath refid="test.classpath" />
@@ -135,6 +137,8 @@
 				<path refid="test.classpath" />
 			</classpath>
 			<formatter type="plain" />
+		    <jvmarg value="-Djava.security.krb5.realm="/>
+		    <jvmarg value="-Djava.security.krb5.kdc="/>
 			<batchtest fork="yes"
 			           todir="${build.dir.test-reports}"
 			           unless="testcase">

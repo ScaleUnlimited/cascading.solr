@@ -19,11 +19,19 @@
 		<developerConnection>Scale Unlimited</developerConnection>
 		<url>https://github.com/ScaleUnlimited/cascading.solr/</url>
 	</scm>
+	
 	<organization>
 		<name>Scale Unlimited</name>
 		<url>http://www.scaleunlimited.com</url>
 	</organization>
+	
 	<repositories>
+		<repository>
+			<id>Conjars</id>
+			<name>Cascading repository</name>
+			<url>http://conjars.org/repo/</url>
+		</repository>
+
 	    <!-- for ant-eclipse jar -->
 		<repository>
 			<id>Bixo</id>
