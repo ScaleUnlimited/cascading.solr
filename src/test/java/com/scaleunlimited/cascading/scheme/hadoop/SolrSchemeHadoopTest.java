@@ -14,15 +14,12 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
-import com.scaleunlimited.cascading.scheme.hadoop.SolrScheme;
-
 import cascading.flow.Flow;
 import cascading.flow.hadoop.HadoopFlowConnector;
 import cascading.flow.hadoop.HadoopFlowProcess;
 import cascading.pipe.Pipe;
 import cascading.scheme.hadoop.SequenceFile;
 import cascading.tap.SinkMode;
-import cascading.tap.Tap;
 import cascading.tap.TapException;
 import cascading.tap.hadoop.Lfs;
 import cascading.tuple.Fields;
@@ -32,8 +29,7 @@ import cascading.tuple.TupleEntryCollector;
 public class SolrSchemeHadoopTest extends Assert {
 
     private static final String TEST_DIR = "build/test/SolrSchemeHadoopTest/";
-    private static final String SOLR_HOME_NUTCH = "src/test/resources/solr-home-nutch/"; 
-    private static final String SOLR_HOME_31 = "src/test/resources/solr-home-3.1/"; 
+    private static final String SOLR_HOME_41 = "src/test/resources/solr-home-4.1/"; 
     
     @Before
     public void setup() throws IOException {
@@ -65,7 +61,7 @@ public class SolrSchemeHadoopTest extends Assert {
     public void testSchemeWrongFields() throws Exception {
         try {
             // Need to make sure we include the required fields.
-            new SolrScheme(new Fields("id", "url", "bogus-field"), SOLR_HOME_NUTCH);
+            new SolrScheme(new Fields("id", "sku", "bogus-field"), SOLR_HOME_41);
             fail("Should have thrown exception");
         } catch (TapException e) {
             assert(e.getMessage().contains("field name doesn't exist"));
@@ -75,7 +71,7 @@ public class SolrSchemeHadoopTest extends Assert {
     @Test
     public void testSchemeMissingRequiredField() throws Exception {
         try {
-            new SolrScheme(new Fields("host"), SOLR_HOME_NUTCH);
+            new SolrScheme(new Fields("sku"), SOLR_HOME_41);
             fail("Should have thrown exception");
         } catch (TapException e) {
             assert(e.getMessage().contains("field name for required"));
@@ -84,16 +80,16 @@ public class SolrSchemeHadoopTest extends Assert {
     
     @Test
     public void testIndexSink() throws Exception {
-        final Fields testFields = new Fields("id", "host", "url", "title", "content", "type");
+        final Fields testFields = new Fields("id", "name", "price", "inStock");
         final String out = TEST_DIR + "testIndexSink/out";
 
-        final String solrHome = SOLR_HOME_NUTCH;
+        final String solrHome = SOLR_HOME_41;
         Lfs solrSink = new Lfs(new SolrScheme(testFields, solrHome), out, SinkMode.REPLACE);
         
         TupleEntryCollector writer = solrSink.openForWrite(new HadoopFlowProcess());
 
         for (int i = 0; i < 100; i++) {
-            writer.add(new Tuple("http://domain.com", "domain.com", "http://domain.com", "Title", "content", "html/text"));
+            writer.add(new Tuple(i, "product #" + i, i * 1.0f, true));
         }
 
         writer.close();
@@ -101,7 +97,7 @@ public class SolrSchemeHadoopTest extends Assert {
 
     @Test
     public void testSimpleIndexing() throws Exception {
-        final Fields testFields = new Fields("id", "host", "url", "title", "content", "type");
+        final Fields testFields = new Fields("id", "name", "price", "cat", "inStock");
 
         final String in = TEST_DIR + "testSimpleIndexing/in";
         final String out = TEST_DIR + "testSimpleIndexing/out";
@@ -109,28 +105,26 @@ public class SolrSchemeHadoopTest extends Assert {
         Lfs lfsSource = new Lfs(new SequenceFile(testFields), in, SinkMode.REPLACE);
         TupleEntryCollector write = lfsSource.openForWrite(new HadoopFlowProcess());
         Tuple t = new Tuple();
-        t.add("http://domain.com/page.html");
-        t.add("domain.com");
-        t.add("http://domain.com/page.html");
-        t.add("Title");
-        t.add("This is some content that I can use to search for words like Solr and BixoLabs");
-        t.add(new Tuple("type1", "type2"));
+        t.add(1);
+        t.add("TurboWriter 2.3");
+        t.add(395.50f);
+        t.add(new Tuple("wordprocessor", "Japanese"));
+        t.add(true);
         write.add(t);
         
         t = new Tuple();
-        t.add("http://domain2.com/page.html");
-        t.add("domain2.com");
-        t.add("http://domain2.com/page.html");
-        t.add("Super Title");
-        t.add("Different stuff");
-        t.add(new Tuple("type1"));
+        t.add(2);
+        t.add("Shasta 1.0");
+        t.add(95.00f);
+        t.add("Chinese");
+        t.add(false);
         write.add(t);
         write.close();
 
         // Now read from the results, and write to a Solr index.
         Pipe writePipe = new Pipe("tuples to Solr");
 
-        final String solrHome = SOLR_HOME_NUTCH;
+        final String solrHome = SOLR_HOME_41;
         Lfs solrSink = new Lfs(new SolrScheme(testFields, solrHome), out);
         Flow flow = new HadoopFlowConnector().connect(lfsSource, solrSink, writePipe);
         flow.complete();
@@ -144,66 +138,18 @@ public class SolrSchemeHadoopTest extends Assert {
         SolrServer solrServer = new EmbeddedSolrServer(coreContainer, "");
 
         ModifiableSolrParams params = new ModifiableSolrParams();
-        params.set(CommonParams.Q, "BixoLabs");
+        params.set(CommonParams.Q, "turbowriter");
 
         QueryResponse res = solrServer.query(params);
         assertEquals(1, res.getResults().size());
         
-        params.set(CommonParams.Q, "title:\"super title\"");
+        params.set(CommonParams.Q, "cat:Japanese");
         res = solrServer.query(params);
         assertEquals(1, res.getResults().size());
         
         params.set(CommonParams.Q, "bogus");
         res = solrServer.query(params);
         assertEquals(0, res.getResults().size());
-        
-        params.set(CommonParams.Q, "type:type1");
-        res = solrServer.query(params);
-        assertEquals(2, res.getResults().size());
     }
     
-    @Test
-    public void testSolr31Indexing() throws Exception {
-        final Fields testFields = new Fields("id", "name");
-
-        final String in = TEST_DIR + "testSolr31Indexing/in";
-        final String out = TEST_DIR + "testSolr31Indexing/out";
-
-        Lfs lfsSource = new Lfs(new SequenceFile(testFields), in, SinkMode.REPLACE);
-        TupleEntryCollector write = lfsSource.openForWrite(new HadoopFlowProcess());
-        Tuple t = new Tuple();
-        t.add("1");
-        t.add("name1");
-        write.add(t);
-        
-        t = new Tuple();
-        t.add("2");
-        t.add("name2");
-        write.add(t);
-        write.close();
-
-        // Now read from the results, and write to a Solr index.
-        Pipe writePipe = new Pipe("tuples to Solr");
-
-        final String solrHome = SOLR_HOME_31;
-        Tap solrSink = new Lfs(new SolrScheme(testFields, solrHome), out);
-        Flow flow = new HadoopFlowConnector().connect(lfsSource, solrSink, writePipe);
-        flow.complete();
-
-        // Open up the Solr index, and do some searches.
-        System.setProperty("solr.solr.home", solrHome);
-        System.setProperty("solr.data.dir", out + "/part-00000");
-        CoreContainer.Initializer initializer = new CoreContainer.Initializer();
-        CoreContainer coreContainer;
-        coreContainer = initializer.initialize();
-        SolrServer solrServer = new EmbeddedSolrServer(coreContainer, "");
-
-        ModifiableSolrParams params = new ModifiableSolrParams();
-        params.set(CommonParams.Q, "name:name1");
-
-        QueryResponse res = solrServer.query(params);
-        assertEquals(1, res.getResults().size());
-    }
-    
-
 }
