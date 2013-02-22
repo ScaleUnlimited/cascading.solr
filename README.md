@@ -1,7 +1,7 @@
 cascading.solr
 ==============
 
-This is a Cascading scheme for Solr.
+This is a [Cascading](http://www.cascading.org/) [scheme](http://docs.cascading.org/cascading/2.1/userguide/html/ch03s05.html#N20867) for [Solr](http://lucene.apache.org/solr/).
 
 It lets you easily add a Tap to a worfklow that generates a Lucene
 index using Solr. The resulting index will have N shards for N reducers,
