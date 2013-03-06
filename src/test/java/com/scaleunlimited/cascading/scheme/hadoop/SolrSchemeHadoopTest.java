@@ -29,8 +29,9 @@ import cascading.tuple.TupleEntryCollector;
 public class SolrSchemeHadoopTest extends Assert {
 
     private static final String TEST_DIR = "build/test/SolrSchemeHadoopTest/";
-    private static final String SOLR_HOME_41 = "src/test/resources/solr-home-4.1/"; 
-    
+    private static final String SOLR_HOME_DIR = "src/test/resources/solr-home-4.1/"; 
+    private static final String SOLR_CORE_DIR = SOLR_HOME_DIR + "collection1";
+
     @Before
     public void setup() throws IOException {
         File outputDir = new File(TEST_DIR);
@@ -61,7 +62,7 @@ public class SolrSchemeHadoopTest extends Assert {
     public void testSchemeWrongFields() throws Exception {
         try {
             // Need to make sure we include the required fields.
-            new SolrScheme(new Fields("id", "sku", "bogus-field"), SOLR_HOME_41);
+            new SolrScheme(new Fields("id", "sku", "bogus-field"), SOLR_CORE_DIR);
             fail("Should have thrown exception");
         } catch (TapException e) {
             assert(e.getMessage().contains("field name doesn't exist"));
@@ -71,7 +72,7 @@ public class SolrSchemeHadoopTest extends Assert {
     @Test
     public void testSchemeMissingRequiredField() throws Exception {
         try {
-            new SolrScheme(new Fields("sku"), SOLR_HOME_41);
+            new SolrScheme(new Fields("sku"), SOLR_CORE_DIR);
             fail("Should have thrown exception");
         } catch (TapException e) {
             assert(e.getMessage().contains("field name for required"));
@@ -83,8 +84,7 @@ public class SolrSchemeHadoopTest extends Assert {
         final Fields testFields = new Fields("id", "name", "price", "inStock");
         final String out = TEST_DIR + "testIndexSink/out";
 
-        final String solrHome = SOLR_HOME_41;
-        Lfs solrSink = new Lfs(new SolrScheme(testFields, solrHome), out, SinkMode.REPLACE);
+        Lfs solrSink = new Lfs(new SolrScheme(testFields, SOLR_CORE_DIR), out, SinkMode.REPLACE);
         
         TupleEntryCollector writer = solrSink.openForWrite(new HadoopFlowProcess());
 
@@ -124,13 +124,12 @@ public class SolrSchemeHadoopTest extends Assert {
         // Now read from the results, and write to a Solr index.
         Pipe writePipe = new Pipe("tuples to Solr");
 
-        final String solrHome = SOLR_HOME_41;
-        Lfs solrSink = new Lfs(new SolrScheme(testFields, solrHome), out);
+        Lfs solrSink = new Lfs(new SolrScheme(testFields, SOLR_CORE_DIR), out);
         Flow flow = new HadoopFlowConnector().connect(lfsSource, solrSink, writePipe);
         flow.complete();
 
         // Open up the Solr index, and do some searches.
-        System.setProperty("solr.solr.home", solrHome);
+        System.setProperty("solr.solr.home", SOLR_HOME_DIR);
         System.setProperty("solr.data.dir", out + "/part-00000");
         CoreContainer.Initializer initializer = new CoreContainer.Initializer();
         CoreContainer coreContainer;

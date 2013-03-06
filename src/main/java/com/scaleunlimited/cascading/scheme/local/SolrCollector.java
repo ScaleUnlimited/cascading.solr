@@ -1,5 +1,6 @@
 package com.scaleunlimited.cascading.scheme.local;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -13,6 +14,8 @@ import org.apache.solr.client.solrj.response.UpdateResponse;
 import org.apache.solr.common.SolrInputDocument;
 import org.apache.solr.common.params.UpdateParams;
 import org.apache.solr.core.CoreContainer;
+
+import com.scaleunlimited.cascading.scheme.core.SolrSchemeUtil;
 
 import cascading.flow.FlowProcess;
 import cascading.tuple.Fields;
@@ -32,7 +35,7 @@ public class SolrCollector {
     private transient SolrServer _solrServer;
     private transient List<SolrInputDocument> _inputDocs;
 
-    public SolrCollector(FlowProcess<Properties> flowProcess, Fields sinkFields, String solrHome, int maxSegments, String dataDirPropertyName, String dataDir) throws IOException {
+    public SolrCollector(FlowProcess<Properties> flowProcess, Fields sinkFields, File solrCoreDir, int maxSegments, String dataDirPropertyName, String dataDir) throws IOException {
         _flowProcess = flowProcess;
         _sinkFields = sinkFields;
         _maxSegments = maxSegments;
@@ -42,11 +45,11 @@ public class SolrCollector {
 
         // Fire up an embedded Solr server
         try {
-            System.setProperty("solr.solr.home", solrHome);
+            System.setProperty("solr.solr.home", SolrSchemeUtil.makeTempSolrHome(solrCoreDir).getAbsolutePath());
             System.setProperty(_dataDirPropertyName, dataDir);
             CoreContainer.Initializer initializer = new CoreContainer.Initializer();
             _coreContainer = initializer.initialize();
-            _solrServer = new EmbeddedSolrServer(_coreContainer, "");
+            _solrServer = new EmbeddedSolrServer(_coreContainer, solrCoreDir.getName());
         } catch (Exception e) {
             if (_coreContainer != null) {
                 _coreContainer.shutdown();

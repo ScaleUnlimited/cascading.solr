@@ -25,6 +25,8 @@ import org.apache.solr.common.SolrInputDocument;
 import org.apache.solr.common.params.UpdateParams;
 import org.apache.solr.core.CoreContainer;
 
+import com.scaleunlimited.cascading.scheme.core.SolrSchemeUtil;
+
 import cascading.flow.hadoop.util.HadoopUtil;
 import cascading.tuple.Fields;
 import cascading.tuple.Tuple;
@@ -32,11 +34,11 @@ import cascading.tuple.Tuple;
 public class SolrOutputFormat extends FileOutputFormat<Tuple, Tuple> {
     private static final Logger LOGGER = Logger.getLogger(SolrOutputFormat.class);
     
-    public static final String SOLR_HOME_PATH_KEY = "com.scaleunlimited.cascading.solr.homePath";
+    public static final String SOLR_CORE_PATH_KEY = "com.scaleunlimited.cascading.solr.corePath";
     public static final String SINK_FIELDS_KEY = "com.scaleunlimited.cascading.solr.sinkFields";
     public static final String MAX_SEGMENTS_KEY = "com.scaleunlimited.cascading.solr.maxSegments";
     public static final String DATA_DIR_PROPERTY_NAME_KEY = "com.scaleunlimited.cascading.solr.dataDirPropertyName";
-
+    
     public static final int DEFAULT_MAX_SEGMENTS = 10;
 
     private static class SolrRecordWriter implements RecordWriter<Tuple, Tuple> {
@@ -58,15 +60,16 @@ public class SolrOutputFormat extends FileOutputFormat<Tuple, Tuple> {
         public SolrRecordWriter(JobConf conf, String name, Progressable progress) throws IOException {
             _progress = progress;
             
-            // String tmpFolder = conf.getJobLocalDir();
+            // Copy Solr core directory from HDFS to temp local location.
             String tmpDir = System.getProperty("java.io.tmpdir");
-            File localSolrHome = new File(tmpDir, "cascading.solr-" + UUID.randomUUID());
-            
-            // Copy solr home from HDFS to temp local location.
-            Path sourcePath = new Path(conf.get(SOLR_HOME_PATH_KEY));
+            File localSolrCore = new File(tmpDir, "cascading.solr-" + UUID.randomUUID());
+            Path sourcePath = new Path(conf.get(SOLR_CORE_PATH_KEY));
             FileSystem sourceFS = sourcePath.getFileSystem(conf);
-            sourceFS.copyToLocalFile(sourcePath, new Path(localSolrHome.getAbsolutePath()));
+            sourceFS.copyToLocalFile(sourcePath, new Path(localSolrCore.getAbsolutePath()));
             
+            // Set up local Solr home.
+            File localSolrHome = SolrSchemeUtil.makeTempSolrHome(localSolrCore);
+
             // Figure out where ultimately the results need to wind up.
             _outputPath = new Path(FileOutputFormat.getTaskOutputPath(conf, name), "index");
             _outputFS = _outputPath.getFileSystem(conf);
@@ -88,7 +91,7 @@ public class SolrOutputFormat extends FileOutputFormat<Tuple, Tuple> {
                 
                 CoreContainer.Initializer initializer = new CoreContainer.Initializer();
                 _coreContainer = initializer.initialize();
-                _solrServer = new EmbeddedSolrServer(_coreContainer, "");
+                _solrServer = new EmbeddedSolrServer(_coreContainer, localSolrCore.getName());
             } catch (Exception e) {
                 if (_coreContainer != null) {
                     _coreContainer.shutdown();
