@@ -44,6 +44,8 @@ public class SolrCollector {
         try {
             System.setProperty("solr.solr.home", solrHome);
             System.setProperty(_dataDirPropertyName, dataDir);
+            System.setProperty("enable.special.handlers", "false"); // All we need is the update request handler
+            
             CoreContainer.Initializer initializer = new CoreContainer.Initializer();
             _coreContainer = initializer.initialize();
             _solrServer = new EmbeddedSolrServer(_coreContainer, "");

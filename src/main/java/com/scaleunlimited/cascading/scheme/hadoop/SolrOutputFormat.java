@@ -85,6 +85,7 @@ public class SolrOutputFormat extends FileOutputFormat<Tuple, Tuple> {
             try {
                 System.setProperty("solr.solr.home", localSolrHome.getAbsolutePath());
                 System.setProperty(conf.get(DATA_DIR_PROPERTY_NAME_KEY), _localIndexDir.getAbsolutePath());
+                System.setProperty("enable.special.handlers", "false"); // All we need is the update request handler
                 
                 CoreContainer.Initializer initializer = new CoreContainer.Initializer();
                 _coreContainer = initializer.initialize();

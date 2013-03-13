@@ -67,6 +67,7 @@ public class SolrScheme extends Scheme<Properties, InputStream, OutputStream, Vo
         
         System.setProperty("solr.solr.home", _solrHomeDir.getAbsolutePath());
         System.setProperty(_dataDirPropertyName, tmpDataDir.getAbsolutePath());
+        System.setProperty("enable.special.handlers", "false"); // All we need is the update request handler
         
         CoreContainer.Initializer initializer = new CoreContainer.Initializer();
         CoreContainer coreContainer = null;

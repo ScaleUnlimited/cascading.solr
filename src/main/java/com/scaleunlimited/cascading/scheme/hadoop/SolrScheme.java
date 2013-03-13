@@ -12,7 +12,6 @@ import javax.xml.parsers.ParserConfigurationException;
 
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.mapred.FileOutputFormat;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.OutputCollector;
 import org.apache.hadoop.mapred.RecordReader;
@@ -71,6 +70,7 @@ public class SolrScheme extends Scheme<JobConf, RecordReader<Tuple, Tuple>, Outp
         
         System.setProperty("solr.solr.home", _solrHomeDir.getAbsolutePath());
         System.setProperty(_dataDirPropertyName, tmpDataDir.getAbsolutePath());
+        System.setProperty("enable.special.handlers", "false"); // All we need is the update request handler
         
         CoreContainer.Initializer initializer = new CoreContainer.Initializer();
         CoreContainer coreContainer = null;
