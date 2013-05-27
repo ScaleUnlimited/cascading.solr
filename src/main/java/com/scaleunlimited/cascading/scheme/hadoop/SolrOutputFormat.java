@@ -61,9 +61,10 @@ public class SolrOutputFormat extends FileOutputFormat<Tuple, Tuple> {
             _progress = progress;
             
             // Copy Solr core directory from HDFS to temp local location.
-            String tmpDir = System.getProperty("java.io.tmpdir");
-            File localSolrCore = new File(tmpDir, "cascading.solr-" + UUID.randomUUID());
             Path sourcePath = new Path(conf.get(SOLR_CORE_PATH_KEY));
+            String coreName = sourcePath.getName();
+            String tmpDir = System.getProperty("java.io.tmpdir");
+            File localSolrCore = new File(tmpDir, "cascading.solr-" + UUID.randomUUID() + "/" + coreName);
             FileSystem sourceFS = sourcePath.getFileSystem(conf);
             sourceFS.copyToLocalFile(sourcePath, new Path(localSolrCore.getAbsolutePath()));
             

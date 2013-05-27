@@ -60,7 +60,8 @@ public class SolrScheme extends Scheme<JobConf, RecordReader<Tuple, Tuple>, Outp
     public void sinkConfInit(FlowProcess<JobConf> flowProcess, Tap<JobConf, RecordReader<Tuple, Tuple>, OutputCollector<Tuple, Tuple>> tap, JobConf conf) {
         // Pick temp location in HDFS for conf files.
         // TODO KKr - should I get rid of this temp directory when we're done?
-        Path hdfsSolrCoreDir = new Path(Hfs.getTempPath(conf),  "solr-core-" + Util.createUniqueID());
+        String coreDirname = _solrCoreDir.getName();
+        Path hdfsSolrCoreDir = new Path(Hfs.getTempPath(conf),  "solr-core-" + Util.createUniqueID() + "/" + coreDirname);
         
         // Copy Solr core directory into HDFS.
         try {
