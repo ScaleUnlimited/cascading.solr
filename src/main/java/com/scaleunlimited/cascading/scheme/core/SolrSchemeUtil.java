@@ -63,6 +63,8 @@ public class SolrSchemeUtil {
         
         System.setProperty("solr.solr.home", tmpSolrHome.getAbsolutePath());
         System.setProperty(dataDirPropertyName, tmpDataDir.getAbsolutePath());
+        System.setProperty("enable.special-handlers", "false"); // All we need is the update request handler
+        System.setProperty("enable.cache-warming", "false"); // We certainly don't need to warm the cache
         
         CoreContainer.Initializer initializer = new CoreContainer.Initializer();
         CoreContainer coreContainer = null;

@@ -47,6 +47,8 @@ public class SolrCollector {
         try {
             System.setProperty("solr.solr.home", SolrSchemeUtil.makeTempSolrHome(solrCoreDir).getAbsolutePath());
             System.setProperty(_dataDirPropertyName, dataDir);
+            System.setProperty("enable.special-handlers", "false"); // All we need is the update request handler
+            System.setProperty("enable.cache-warming", "false"); // We certainly don't need to warm the cache
             CoreContainer.Initializer initializer = new CoreContainer.Initializer();
             _coreContainer = initializer.initialize();
             _solrServer = new EmbeddedSolrServer(_coreContainer, solrCoreDir.getName());
