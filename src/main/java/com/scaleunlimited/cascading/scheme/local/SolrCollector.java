@@ -2,24 +2,20 @@ package com.scaleunlimited.cascading.scheme.local;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Properties;
 
 import org.apache.solr.client.solrj.SolrServer;
 import org.apache.solr.client.solrj.SolrServerException;
 import org.apache.solr.client.solrj.embedded.EmbeddedSolrServer;
-import org.apache.solr.client.solrj.request.UpdateRequest;
-import org.apache.solr.client.solrj.response.UpdateResponse;
 import org.apache.solr.common.SolrInputDocument;
 import org.apache.solr.common.params.UpdateParams;
 import org.apache.solr.core.CoreContainer;
 
-import com.scaleunlimited.cascading.scheme.core.SolrSchemeUtil;
-
 import cascading.flow.FlowProcess;
 import cascading.tuple.Fields;
 import cascading.tuple.Tuple;
+
+import com.scaleunlimited.cascading.scheme.core.BinaryUpdateRequest;
 
 public class SolrCollector {
 
@@ -33,7 +29,7 @@ public class SolrCollector {
     
     private transient CoreContainer _coreContainer;
     private transient SolrServer _solrServer;
-    private transient List<SolrInputDocument> _inputDocs;
+    private transient BinaryUpdateRequest _updateRequest;
 
     public SolrCollector(FlowProcess<Properties> flowProcess, Fields sinkFields, File solrCoreDir, int maxSegments, String dataDirPropertyName, String dataDir) throws IOException {
         _flowProcess = flowProcess;
@@ -41,11 +37,13 @@ public class SolrCollector {
         _maxSegments = maxSegments;
         _dataDirPropertyName = dataDirPropertyName;
         
-        _inputDocs = new ArrayList<SolrInputDocument>(MAX_DOCS_PER_ADD);
+        _updateRequest = new BinaryUpdateRequest();
+        // Set up overwite=false. See https://issues.apache.org/jira/browse/SOLR-653
+        // for details why we have to do it this way.
+        _updateRequest.setParam(UpdateParams.OVERWRITE, Boolean.toString(false));
 
         // Fire up an embedded Solr server
         try {
-            System.setProperty("solr.solr.home", SolrSchemeUtil.makeTempSolrHome(solrCoreDir).getAbsolutePath());
             System.setProperty(_dataDirPropertyName, dataDir);
             System.setProperty("enable.special-handlers", "false"); // All we need is the update request handler
             System.setProperty("enable.cache-warming", "false"); // We certainly don't need to warm the cache
@@ -79,7 +77,7 @@ public class SolrCollector {
             }
         }
 
-        _inputDocs.add(doc);
+        _updateRequest.add(doc);
         flushInputDocuments(false);
     }
     
@@ -90,24 +88,13 @@ public class SolrCollector {
     }
     
     private void flushInputDocuments(boolean force) throws IOException {
-        if ((force && (_inputDocs.size() > 0)) || (_inputDocs.size() >= MAX_DOCS_PER_ADD)) {
+        if ((force && (_updateRequest.getDocListSize() > 0)) || (_updateRequest.getDocListSize() >= MAX_DOCS_PER_ADD)) {
             
             // TODO do we need to do this?
             Thread reporterThread = startProgressThread();
 
             try {
-                UpdateRequest req = new UpdateRequest();
-                req.add(_inputDocs);
-                
-                // Set up overwite=false. See https://issues.apache.org/jira/browse/SOLR-653
-                // for details why we have to do it this way.
-                req.setParam(UpdateParams.OVERWRITE, Boolean.toString(false));
-                UpdateResponse rsp = req.process(_solrServer);
-                
-                // TODO KKr - figure out if we need to check this or not.
-                if (rsp.getStatus() != 0) {
-                    throw new SolrServerException("Non-zero response from Solr: " + rsp.getStatus());
-                }
+                _updateRequest.process(_solrServer);
                 
                 if (force) {
                     _solrServer.commit(true, true);
@@ -116,7 +103,7 @@ public class SolrCollector {
             } catch (SolrServerException e) {
                 throw new IOException(e);
             } finally {
-                _inputDocs.clear();
+                _updateRequest.clear();
                 reporterThread.interrupt();
             }
         }

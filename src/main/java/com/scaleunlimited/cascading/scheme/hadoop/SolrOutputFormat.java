@@ -3,8 +3,6 @@ package com.scaleunlimited.cascading.scheme.hadoop;
 import java.io.File;
 import java.io.FilenameFilter;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.UUID;
 
 import org.apache.commons.io.FileUtils;
@@ -19,17 +17,16 @@ import org.apache.log4j.Logger;
 import org.apache.solr.client.solrj.SolrServer;
 import org.apache.solr.client.solrj.SolrServerException;
 import org.apache.solr.client.solrj.embedded.EmbeddedSolrServer;
-import org.apache.solr.client.solrj.request.UpdateRequest;
-import org.apache.solr.client.solrj.response.UpdateResponse;
 import org.apache.solr.common.SolrInputDocument;
 import org.apache.solr.common.params.UpdateParams;
 import org.apache.solr.core.CoreContainer;
 
-import com.scaleunlimited.cascading.scheme.core.SolrSchemeUtil;
-
 import cascading.flow.hadoop.util.HadoopUtil;
 import cascading.tuple.Fields;
 import cascading.tuple.Tuple;
+
+import com.scaleunlimited.cascading.scheme.core.BinaryUpdateRequest;
+import com.scaleunlimited.cascading.scheme.core.SolrSchemeUtil;
 
 public class SolrOutputFormat extends FileOutputFormat<Tuple, Tuple> {
     private static final Logger LOGGER = Logger.getLogger(SolrOutputFormat.class);
@@ -55,7 +52,7 @@ public class SolrOutputFormat extends FileOutputFormat<Tuple, Tuple> {
         private transient SolrServer _solrServer;
         private transient Fields _sinkFields;
         private transient int _maxSegments;
-        private transient List<SolrInputDocument> _inputDocs;
+        private transient BinaryUpdateRequest _updateRequest;
         
         public SolrRecordWriter(JobConf conf, String name, Progressable progress) throws IOException {
             _progress = progress;
@@ -83,11 +80,13 @@ public class SolrOutputFormat extends FileOutputFormat<Tuple, Tuple> {
             // This is where data will wind up, inside of an index subdir.
             _localIndexDir = new File(localSolrHome, "data");
 
-            _inputDocs = new ArrayList<SolrInputDocument>(MAX_DOCS_PER_ADD);
-            
+            _updateRequest = new BinaryUpdateRequest();
+            // Set up overwite=false. See https://issues.apache.org/jira/browse/SOLR-653
+            // for details why we have to do it this way.
+            _updateRequest.setParam(UpdateParams.OVERWRITE, Boolean.toString(false));
+
             // Fire up an embedded Solr server
             try {
-                System.setProperty("solr.solr.home", localSolrHome.getAbsolutePath());
                 System.setProperty(conf.get(DATA_DIR_PROPERTY_NAME_KEY), _localIndexDir.getAbsolutePath());
                 System.setProperty("enable.special-handlers", "false"); // All we need is the update request handler
                 System.setProperty("enable.cache-warming", "false"); // We certainly don't need to warm the cache
@@ -184,7 +183,7 @@ public class SolrOutputFormat extends FileOutputFormat<Tuple, Tuple> {
             }
 
             try {
-                _inputDocs.add(doc);
+                _updateRequest.add(doc);
                 flushInputDocuments(false);
             } catch (SolrServerException e) {
                 throw new IOException(e);
@@ -198,24 +197,13 @@ public class SolrOutputFormat extends FileOutputFormat<Tuple, Tuple> {
         }
         
         private void flushInputDocuments(boolean force) throws SolrServerException, IOException {
-            if ((force && (_inputDocs.size() > 0)) || (_inputDocs.size() >= MAX_DOCS_PER_ADD)) {
+            if ((force && (_updateRequest.getDocListSize() > 0)) || (_updateRequest.getDocListSize() >= MAX_DOCS_PER_ADD)) {
                 
                 // Because we never write anything out, we need to tell Hadoop we're not hung.
                 Thread reporterThread = startProgressThread();
 
                 try {
-                    UpdateRequest req = new UpdateRequest();
-                    req.add(_inputDocs);
-                    
-                    // Set up overwite=false. See https://issues.apache.org/jira/browse/SOLR-653
-                    // for details why we have to do it this way.
-                    req.setParam(UpdateParams.OVERWRITE, Boolean.toString(false));
-                    UpdateResponse rsp = req.process(_solrServer);
-                    
-                    // TODO KKr - figure out if we need to check this or not.
-                    if (rsp.getStatus() != 0) {
-                        throw new SolrServerException("Non-zero response from Solr: " + rsp.getStatus());
-                    }
+                    _updateRequest.process(_solrServer);
                     
                     if (force) {
                         _solrServer.commit(true, true);
@@ -224,7 +212,7 @@ public class SolrOutputFormat extends FileOutputFormat<Tuple, Tuple> {
                 } catch (SolrServerException e) {
                     throw new IOException(e);
                 } finally {
-                    _inputDocs.clear();
+                    _updateRequest.clear();
                     reporterThread.interrupt();
                 }
             }

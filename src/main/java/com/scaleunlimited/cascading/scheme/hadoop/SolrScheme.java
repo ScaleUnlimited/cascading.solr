@@ -52,6 +52,16 @@ public class SolrScheme extends Scheme<JobConf, RecordReader<Tuple, Tuple>, Outp
     }
     
     @Override
+    public boolean isSink() {
+        return true;
+    }
+    
+    @Override
+    public boolean isSource() {
+        return false;
+    }
+    
+    @Override
     public void sourceConfInit(FlowProcess<JobConf> flowProcess, Tap<JobConf, RecordReader<Tuple, Tuple>, OutputCollector<Tuple, Tuple>> tap, JobConf conf) {
         throw new TapException("SolrScheme can only be used as a sink, not a source");
     }

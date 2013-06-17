@@ -49,6 +49,16 @@ public class SolrScheme extends Scheme<Properties, InputStream, OutputStream, Vo
     }
     
     @Override
+    public boolean isSink() {
+        return true;
+    }
+    
+    @Override
+    public boolean isSource() {
+        return false;
+    }
+    
+    @Override
     public void sourceConfInit(FlowProcess<Properties> flowProcess, Tap<Properties, InputStream, OutputStream> tap, Properties conf) {
         throw new TapException("SolrScheme can only be used as a sink, not a source");
     }
