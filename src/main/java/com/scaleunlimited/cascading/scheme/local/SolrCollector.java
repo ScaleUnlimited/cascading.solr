@@ -38,7 +38,7 @@ public class SolrCollector {
         _dataDirPropertyName = dataDirPropertyName;
         
         _updateRequest = new BinaryUpdateRequest();
-        // Set up overwite=false. See https://issues.apache.org/jira/browse/SOLR-653
+        // Set up overwrite=false. See https://issues.apache.org/jira/browse/SOLR-653
         // for details why we have to do it this way.
         _updateRequest.setParam(UpdateParams.OVERWRITE, Boolean.toString(false));
 
