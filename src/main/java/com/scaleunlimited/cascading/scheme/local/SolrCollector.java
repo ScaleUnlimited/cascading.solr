@@ -16,6 +16,7 @@ import cascading.tuple.Fields;
 import cascading.tuple.Tuple;
 
 import com.scaleunlimited.cascading.scheme.core.BinaryUpdateRequest;
+import com.scaleunlimited.cascading.scheme.core.SolrSchemeUtil;
 
 public class SolrCollector {
 
@@ -44,6 +45,7 @@ public class SolrCollector {
 
         // Fire up an embedded Solr server
         try {
+            System.setProperty("solr.solr.home", SolrSchemeUtil.makeTempSolrHome(solrCoreDir).getAbsolutePath());
             System.setProperty(_dataDirPropertyName, dataDir);
             System.setProperty("enable.special-handlers", "false"); // All we need is the update request handler
             System.setProperty("enable.cache-warming", "false"); // We certainly don't need to warm the cache

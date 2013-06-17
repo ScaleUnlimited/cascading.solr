@@ -87,6 +87,7 @@ public class SolrOutputFormat extends FileOutputFormat<Tuple, Tuple> {
 
             // Fire up an embedded Solr server
             try {
+                System.setProperty("solr.solr.home", localSolrHome.getAbsolutePath());
                 System.setProperty(conf.get(DATA_DIR_PROPERTY_NAME_KEY), _localIndexDir.getAbsolutePath());
                 System.setProperty("enable.special-handlers", "false"); // All we need is the update request handler
                 System.setProperty("enable.cache-warming", "false"); // We certainly don't need to warm the cache
