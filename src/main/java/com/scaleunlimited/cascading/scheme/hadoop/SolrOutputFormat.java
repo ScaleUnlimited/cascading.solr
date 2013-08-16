@@ -13,13 +13,14 @@ import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.RecordWriter;
 import org.apache.hadoop.mapred.Reporter;
 import org.apache.hadoop.util.Progressable;
-import org.apache.log4j.Logger;
 import org.apache.solr.client.solrj.SolrServer;
 import org.apache.solr.client.solrj.SolrServerException;
 import org.apache.solr.client.solrj.embedded.EmbeddedSolrServer;
 import org.apache.solr.common.SolrInputDocument;
 import org.apache.solr.common.params.UpdateParams;
 import org.apache.solr.core.CoreContainer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import cascading.flow.hadoop.util.HadoopUtil;
 import cascading.tuple.Fields;
@@ -29,7 +30,7 @@ import com.scaleunlimited.cascading.scheme.core.BinaryUpdateRequest;
 import com.scaleunlimited.cascading.scheme.core.SolrSchemeUtil;
 
 public class SolrOutputFormat extends FileOutputFormat<Tuple, Tuple> {
-    private static final Logger LOGGER = Logger.getLogger(SolrOutputFormat.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(SolrOutputFormat.class);
     
     public static final String SOLR_CORE_PATH_KEY = "com.scaleunlimited.cascading.solr.corePath";
     public static final String SINK_FIELDS_KEY = "com.scaleunlimited.cascading.solr.sinkFields";
