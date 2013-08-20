@@ -139,6 +139,8 @@
         highlighting document content. Use the "text" field to search the content. -->
    <field name="content" type="text_general" indexed="false" stored="true" multiValued="true"/>
    
+   <!-- Example binary field -->
+   <field name="image" type="binary" indexed="false" stored="true" />
 
    <!-- catchall field, containing all other searchable text fields (implemented
         via copyField further on in this schema  -->

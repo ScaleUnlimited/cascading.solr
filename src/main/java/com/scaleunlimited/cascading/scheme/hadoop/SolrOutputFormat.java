@@ -14,19 +14,14 @@ import org.apache.hadoop.mapred.RecordWriter;
 import org.apache.hadoop.mapred.Reporter;
 import org.apache.hadoop.util.Progressable;
 import org.apache.log4j.Logger;
-import org.apache.solr.client.solrj.SolrServer;
-import org.apache.solr.client.solrj.SolrServerException;
-import org.apache.solr.client.solrj.embedded.EmbeddedSolrServer;
-import org.apache.solr.common.SolrInputDocument;
-import org.apache.solr.common.params.UpdateParams;
-import org.apache.solr.core.CoreContainer;
 
 import cascading.flow.hadoop.util.HadoopUtil;
 import cascading.tuple.Fields;
 import cascading.tuple.Tuple;
 
-import com.scaleunlimited.cascading.scheme.core.BinaryUpdateRequest;
+import com.scaleunlimited.cascading.scheme.core.KeepAliveHook;
 import com.scaleunlimited.cascading.scheme.core.SolrSchemeUtil;
+import com.scaleunlimited.cascading.scheme.core.SolrWriter;
 
 public class SolrOutputFormat extends FileOutputFormat<Tuple, Tuple> {
     private static final Logger LOGGER = Logger.getLogger(SolrOutputFormat.class);
@@ -40,22 +35,14 @@ public class SolrOutputFormat extends FileOutputFormat<Tuple, Tuple> {
 
     private static class SolrRecordWriter implements RecordWriter<Tuple, Tuple> {
 
-        // TODO KKr - make this configurable.
-        private static final int MAX_DOCS_PER_ADD = 500;
-        
         private Path _outputPath;
         private FileSystem _outputFS;
-        private Progressable _progress;
         
+        private transient KeepAliveHook _keepAliveHook;
         private transient File _localIndexDir;
-        private transient CoreContainer _coreContainer;
-        private transient SolrServer _solrServer;
-        private transient Fields _sinkFields;
-        private transient int _maxSegments;
-        private transient BinaryUpdateRequest _updateRequest;
+        private transient SolrWriter _solrWriter;
         
         public SolrRecordWriter(JobConf conf, String name, Progressable progress) throws IOException {
-            _progress = progress;
             
             // Copy Solr core directory from HDFS to temp local location.
             Path sourcePath = new Path(conf.get(SOLR_CORE_PATH_KEY));
@@ -73,43 +60,25 @@ public class SolrOutputFormat extends FileOutputFormat<Tuple, Tuple> {
             _outputFS = _outputPath.getFileSystem(conf);
 
             // Get the set of fields we're indexing.
-            _sinkFields = HadoopUtil.deserializeBase64(conf.get(SINK_FIELDS_KEY), conf, Fields.class);
+            Fields sinkFields = HadoopUtil.deserializeBase64(conf.get(SINK_FIELDS_KEY), conf, Fields.class);
             
-            _maxSegments = conf.getInt(MAX_SEGMENTS_KEY, DEFAULT_MAX_SEGMENTS);
+            int maxSegments = conf.getInt(MAX_SEGMENTS_KEY, DEFAULT_MAX_SEGMENTS);
+            
+            String dataDirPropertyName = conf.get(DATA_DIR_PROPERTY_NAME_KEY);
             
             // This is where data will wind up, inside of an index subdir.
             _localIndexDir = new File(localSolrHome, "data");
 
-            _updateRequest = new BinaryUpdateRequest();
-            // Set up overwite=false. See https://issues.apache.org/jira/browse/SOLR-653
-            // for details why we have to do it this way.
-            _updateRequest.setParam(UpdateParams.OVERWRITE, Boolean.toString(false));
-
-            // Fire up an embedded Solr server
-            try {
-                System.setProperty("solr.solr.home", localSolrHome.getAbsolutePath());
-                System.setProperty(conf.get(DATA_DIR_PROPERTY_NAME_KEY), _localIndexDir.getAbsolutePath());
-                System.setProperty("enable.special-handlers", "false"); // All we need is the update request handler
-                System.setProperty("enable.cache-warming", "false"); // We certainly don't need to warm the cache
-                
-                CoreContainer.Initializer initializer = new CoreContainer.Initializer();
-                _coreContainer = initializer.initialize();
-                _solrServer = new EmbeddedSolrServer(_coreContainer, localSolrCore.getName());
-            } catch (Exception e) {
-                if (_coreContainer != null) {
-                    _coreContainer.shutdown();
-                }
-                
-                throw new IOException(e);
-            }
-
+            _keepAliveHook = new HadoopKeepAliveHook(progress);
+            
+            _solrWriter = new SolrWriter(_keepAliveHook, sinkFields, dataDirPropertyName, _localIndexDir.getAbsolutePath(), localSolrCore, maxSegments) { };
         }
         
         @Override
         protected void finalize() throws Throwable {
-            if (_solrServer != null) {
-                _coreContainer.shutdown();
-                _solrServer = null;
+            if (_solrWriter != null) {
+                _solrWriter.cleanup();
+                _solrWriter = null;
             }
             
             super.finalize();
@@ -117,14 +86,7 @@ public class SolrOutputFormat extends FileOutputFormat<Tuple, Tuple> {
         
         @Override
         public void close(final Reporter reporter) throws IOException {
-
-            try {
-                flushInputDocuments(true);
-                _coreContainer.shutdown();
-                _solrServer = null;
-            } catch (SolrServerException e) {
-                throw new IOException(e);
-            }
+            _solrWriter.cleanup();
             
             // Finally we can copy the resulting index up to the target location in HDFS
             copyToHDFS();
@@ -166,58 +128,7 @@ public class SolrOutputFormat extends FileOutputFormat<Tuple, Tuple> {
         
         @Override
         public void write(Tuple key, Tuple value) throws IOException {
-            SolrInputDocument doc = new SolrInputDocument();
-            
-            for (int i = 0; i < _sinkFields.size(); i++) {
-                String name = (String)_sinkFields.get(i);
-                Object fieldValue = value.getObject(i);
-                if (fieldValue == null) {
-                    // Don't add null values.
-                } else if (fieldValue instanceof Tuple) {
-                    Tuple list = (Tuple)fieldValue;
-                    for (int j = 0; j < list.size(); j++) {
-                        safeAdd(doc, name, list.getObject(j).toString());
-                    }
-                } else {
-                    safeAdd(doc, name, fieldValue.toString());
-                }
-            }
-
-            try {
-                _updateRequest.add(doc);
-                flushInputDocuments(false);
-            } catch (SolrServerException e) {
-                throw new IOException(e);
-            }
-        }
-        
-        private void safeAdd(SolrInputDocument doc, String fieldName, String value) {
-            if ((value != null) && (value.length() > 0)) {
-                doc.addField(fieldName, value);
-            }
-        }
-        
-        private void flushInputDocuments(boolean force) throws SolrServerException, IOException {
-            if ((force && (_updateRequest.getDocListSize() > 0)) || (_updateRequest.getDocListSize() >= MAX_DOCS_PER_ADD)) {
-                
-                // Because we never write anything out, we need to tell Hadoop we're not hung.
-                Thread reporterThread = startProgressThread();
-
-                try {
-                    _updateRequest.process(_solrServer);
-                    
-                    if (force) {
-                        _solrServer.commit(true, true);
-                        _solrServer.optimize(true, true, _maxSegments);
-                    }
-                } catch (SolrServerException e) {
-                    throw new IOException(e);
-                } finally {
-                    _updateRequest.clear();
-                    reporterThread.interrupt();
-                }
-            }
-        
+            _solrWriter.add(value);
         }
         
         /**
@@ -229,7 +140,7 @@ public class SolrOutputFormat extends FileOutputFormat<Tuple, Tuple> {
                 @Override
                 public void run() {
                     while (!isInterrupted()) {
-                        _progress.progress();
+                        _keepAliveHook.keepAlive();
                         
                         try {
                             sleep(10 * 1000);
