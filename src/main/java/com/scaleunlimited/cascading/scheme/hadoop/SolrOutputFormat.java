@@ -13,7 +13,8 @@ import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.RecordWriter;
 import org.apache.hadoop.mapred.Reporter;
 import org.apache.hadoop.util.Progressable;
-import org.apache.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import cascading.flow.hadoop.util.HadoopUtil;
 import cascading.tuple.Fields;
@@ -24,7 +25,7 @@ import com.scaleunlimited.cascading.scheme.core.SolrSchemeUtil;
 import com.scaleunlimited.cascading.scheme.core.SolrWriter;
 
 public class SolrOutputFormat extends FileOutputFormat<Tuple, Tuple> {
-    private static final Logger LOGGER = Logger.getLogger(SolrOutputFormat.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(SolrOutputFormat.class);
     
     public static final String SOLR_CORE_PATH_KEY = "com.scaleunlimited.cascading.solr.corePath";
     public static final String SINK_FIELDS_KEY = "com.scaleunlimited.cascading.solr.sinkFields";
@@ -52,9 +53,6 @@ public class SolrOutputFormat extends FileOutputFormat<Tuple, Tuple> {
             FileSystem sourceFS = sourcePath.getFileSystem(conf);
             sourceFS.copyToLocalFile(sourcePath, new Path(localSolrCore.getAbsolutePath()));
             
-            // Set up local Solr home.
-            File localSolrHome = SolrSchemeUtil.makeTempSolrHome(localSolrCore);
-
             // Figure out where ultimately the results need to wind up.
             _outputPath = new Path(FileOutputFormat.getTaskOutputPath(conf, name), "index");
             _outputFS = _outputPath.getFileSystem(conf);
@@ -66,6 +64,9 @@ public class SolrOutputFormat extends FileOutputFormat<Tuple, Tuple> {
             
             String dataDirPropertyName = conf.get(DATA_DIR_PROPERTY_NAME_KEY);
             
+            // Set up local Solr home.
+            File localSolrHome = SolrSchemeUtil.makeTempSolrHome(localSolrCore);
+
             // This is where data will wind up, inside of an index subdir.
             _localIndexDir = new File(localSolrHome, "data");
 

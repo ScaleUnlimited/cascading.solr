@@ -31,13 +31,6 @@
 			<name>Cascading repository</name>
 			<url>http://conjars.org/repo/</url>
 		</repository>
-
-	    <!-- for ant-eclipse jar -->
-		<repository>
-			<id>Bixo</id>
-			<name>Bixo GitHub repository</name>
-			<url>http://bixo.github.com/repo/</url>
-		</repository>
 	</repositories>
 	
     <properties>
@@ -75,7 +68,7 @@
         <dependency>
             <groupId>com.scaleunlimited</groupId>
             <artifactId>cascading.utils</artifactId>
-            <version>2.0</version>
+            <version>2.2-SNAPSHOT</version>
         </dependency>
         
 		<dependency>
@@ -84,10 +77,10 @@
             <version>${solr.version}</version>
         </dependency>
         
-		<dependency>
-            <groupId>log4j</groupId>
-            <artifactId>log4j</artifactId>
-            <version>1.2.16</version>
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+            <version>1.7.2</version>
         </dependency>
         
         <!-- Test -->
@@ -110,6 +103,13 @@
                     <groupId>org.objenesis</groupId>
                 </exclusion>
             </exclusions>
+        </dependency>
+
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-log4j12</artifactId>
+            <version>1.7.2</version>
+            <scope>test</scope>
         </dependency>
 
         <!-- Provided -->
