@@ -146,11 +146,10 @@ public abstract class AbstractSolrSchemeTest extends Assert {
         flow.complete();
 
         // Open up the Solr index, and do some searches.
-        System.setProperty("solr.solr.home", SOLR_HOME_DIR);
         System.setProperty("solr.data.dir", out + "/part-00000");
-        CoreContainer.Initializer initializer = new CoreContainer.Initializer();
-        CoreContainer coreContainer;
-        coreContainer = initializer.initialize();
+
+        CoreContainer coreContainer = new CoreContainer(SOLR_HOME_DIR);
+        coreContainer.load();
         SolrServer solrServer = new EmbeddedSolrServer(coreContainer, "");
 
         ModifiableSolrParams params = new ModifiableSolrParams();

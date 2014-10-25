@@ -61,16 +61,14 @@ public class SolrSchemeUtil {
         File tmpDataDir = new File(tmpFolder, UUID.randomUUID().toString());
         tmpDataDir.mkdir();
         
-        System.setProperty("solr.solr.home", tmpSolrHome.getAbsolutePath());
         System.setProperty(dataDirPropertyName, tmpDataDir.getAbsolutePath());
         System.setProperty("enable.special-handlers", "false"); // All we need is the update request handler
         System.setProperty("enable.cache-warming", "false"); // We certainly don't need to warm the cache
         
-        CoreContainer.Initializer initializer = new CoreContainer.Initializer();
-        CoreContainer coreContainer = null;
+        CoreContainer coreContainer = new CoreContainer(tmpSolrHome.getAbsolutePath());
         
         try {
-            coreContainer = initializer.initialize();
+            coreContainer.load();
             Collection<SolrCore> cores = coreContainer.getCores();
             SolrCore core = null;
             
@@ -82,7 +80,7 @@ public class SolrSchemeUtil {
                 core = cores.iterator().next();
             }
 
-            IndexSchema schema = core.getSchema();
+            IndexSchema schema = core.getLatestSchema();
             Map<String, SchemaField> solrFields = schema.getFields();
             Set<String> schemeFieldnames = new HashSet<String>();
 

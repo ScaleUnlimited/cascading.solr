@@ -34,18 +34,18 @@ public abstract class SolrWriter {
         _maxSegments = maxSegments;
         
         _updateRequest = new BinaryUpdateRequest();
-        // Set up overwite=false. See https://issues.apache.org/jira/browse/SOLR-653
+        // Set up overwrite=false. See https://issues.apache.org/jira/browse/SOLR-653
         // for details why we have to do it this way.
         _updateRequest.setParam(UpdateParams.OVERWRITE, Boolean.toString(false));
 
         // Fire up an embedded Solr server
         try {
-            System.setProperty("solr.solr.home", SolrSchemeUtil.makeTempSolrHome(solrCoreDir).getAbsolutePath());
             System.setProperty(dataDirPropertyName, dataDir);
             System.setProperty("enable.special-handlers", "false"); // All we need is the update request handler
             System.setProperty("enable.cache-warming", "false"); // We certainly don't need to warm the cache
-            CoreContainer.Initializer initializer = new CoreContainer.Initializer();
-            _coreContainer = initializer.initialize();
+            File solrHome = SolrSchemeUtil.makeTempSolrHome(solrCoreDir);
+            _coreContainer = new CoreContainer(solrHome.getAbsolutePath());
+            _coreContainer.load();
             _solrServer = new EmbeddedSolrServer(_coreContainer, solrCoreDir.getName());
         } catch (Exception e) {
             if (_coreContainer != null) {
