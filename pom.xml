@@ -34,9 +34,9 @@
 	</repositories>
 	
     <properties>
-        <cascading.version>2.1.6</cascading.version>
-        <hadoop.version>1.0.4</hadoop.version>
-        <solr.version>4.2.1</solr.version>
+        <cascading.version>2.5.6</cascading.version>
+        <hadoop.version>2.5.1</hadoop.version>
+        <solr.version>4.10.1</solr.version>
     </properties>
     
 	<dependencies>
@@ -116,7 +116,7 @@
         
 		<dependency>
             <groupId>org.apache.hadoop</groupId>
-            <artifactId>hadoop-core</artifactId>
+            <artifactId>hadoop-client</artifactId>
             <version>${hadoop.version}</version>
             <exclusions>
                 <exclusion>
