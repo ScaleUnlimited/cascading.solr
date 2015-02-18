@@ -119,10 +119,13 @@
             <scope>test</scope>
         </dependency>
         
+        <!-- Needed when Hadoop is running in local mode...seems like something that's missing
+             from the Hadoop pom -->
         <dependency>
             <groupId>commons-httpclient</groupId>
             <artifactId>commons-httpclient</artifactId>
             <version>3.1</version>
+            <scope>test</scope>
          </dependency>
 		
         <dependency>
