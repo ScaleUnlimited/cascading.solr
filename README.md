@@ -13,3 +13,25 @@ it is copied to the target location (HDFS, S3, etc) as specified by the
 Tap. This improves the performance of building indexes, especially if
 you can deploy multiple shards and thus build using many reducers.
 
+You can find the latest version of the jar at [Conjars](http://conjars.org/search?q=cascading.solr)
+
+To add this jar to your project (via Maven), include the following in your pom.xml:
+
+```xml
+	<repositories>
+		<repository>
+			<id>Conjars</id>
+			<name>Cascading repository</name>
+			<url>http://conjars.org/repo/</url>
+		</repository>
+	</repositories>
+  ...
+	<dependencies>
+		<dependency>
+			<groupId>com.scaleunlimited</groupId>
+			<artifactId>cascading.solr</artifactId>
+			<version>${cascading.solr.version}</version>
+		</dependency>
+		...
+	</dependencies>
+```
