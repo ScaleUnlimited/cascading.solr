@@ -35,3 +35,83 @@ To add this jar to your project (via Maven), include the following in your pom.x
 		...
 	</dependencies>
 ```
+
+An example of using this SolrScheme (taken from `SolrSchemeHadoopTest.java` and `AbstractSolrSchemeTest.java`) looks like:
+
+```java
+    private static final String TEST_DIR = "build/test/SolrSchemeHadoopTest/";
+    private static final String SOLR_HOME_DIR = "src/test/resources/solr-home-4.1/"; 
+    protected static final String SOLR_CORE_DIR = SOLR_HOME_DIR + "collection1"; 
+
+    @Test
+    public void testSimpleIndexing() throws Exception {
+        final Fields testFields = new Fields("id", "name", "price", "cat", "inStock", "image");
+
+        final String in = TEST_DIR + "testSimpleIndexing/in";
+        final String out = TEST_DIR + "testSimpleIndexing/out";
+
+        byte[] imageData = new byte[] {0, 1, 2, 3, 5};
+        
+        // Create some data
+        Tap source = new Hfs(new SequenceFile(testFields), in, SinkMode.REPLACE);
+        TupleEntryCollector write = source.openForWrite(makeFlowProcess());
+        Tuple t = new Tuple();
+        t.add(1);
+        t.add("TurboWriter 2.3");
+        t.add(395.50f);
+        t.add(new Tuple("wordprocessor", "Japanese"));
+        t.add(true);
+        t.add(imageData);
+        write.add(t);
+        
+        t = new Tuple();
+        t.add(2);
+        t.add("Shasta 1.0");
+        t.add(95.00f);
+        t.add("Chinese");
+        t.add(false);
+        
+        BytesWritable bw = new BytesWritable(imageData);
+        bw.setCapacity(imageData.length + 10);
+        t.add(bw);
+        write.add(t);
+        write.close();
+
+        // Now read from the results, and write to a Solr index.
+        Pipe writePipe = new Pipe("tuples to Solr");
+
+        Scheme scheme = new SolrScheme(testFields, SOLR_CORE_DIR);
+        Tap solrSink = new Hfs(scheme, out, SinkMode.REPLACE);
+        Flow flow = makeFlowConnector().connect(source, solrSink, writePipe);
+        flow.complete();
+
+        // Open up the Solr index, and do some searches.
+        System.setProperty("solr.data.dir", out + "/part-00000");
+
+        CoreContainer coreContainer = new CoreContainer(SOLR_HOME_DIR);
+        coreContainer.load();
+        SolrServer solrServer = new EmbeddedSolrServer(coreContainer, "");
+
+        ModifiableSolrParams params = new ModifiableSolrParams();
+        params.set(CommonParams.Q, "turbowriter");
+
+        QueryResponse res = solrServer.query(params);
+        assertEquals(1, res.getResults().size());
+        byte[] storedImageData = (byte[])res.getResults().get(0).getFieldValue("image");
+        assertEquals(imageData, storedImageData);
+        
+        params.set(CommonParams.Q, "cat:Japanese");
+        res = solrServer.query(params);
+        assertEquals(1, res.getResults().size());
+        
+        params.set(CommonParams.Q, "cat:Chinese");
+        res = solrServer.query(params);
+        assertEquals(1, res.getResults().size());
+        storedImageData = (byte[])res.getResults().get(0).getFieldValue("image");
+        assertEquals(imageData, storedImageData);
+        
+        params.set(CommonParams.Q, "bogus");
+        res = solrServer.query(params);
+        assertEquals(0, res.getResults().size());
+    }
+```
