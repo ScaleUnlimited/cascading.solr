@@ -40,9 +40,8 @@ public abstract class SolrWriter {
 
         // Fire up an embedded Solr server
         try {
-            System.setProperty(dataDirPropertyName, dataDir);
-            System.setProperty("enable.special-handlers", "false"); // All we need is the update request handler
-            System.setProperty("enable.cache-warming", "false"); // We certainly don't need to warm the cache
+            SolrSchemeUtil.setSolrConfigProperties(dataDirPropertyName, dataDir);
+            
             File solrHome = SolrSchemeUtil.makeTempSolrHome(solrCoreDir);
             _coreContainer = new CoreContainer(solrHome.getAbsolutePath());
             _coreContainer.load();

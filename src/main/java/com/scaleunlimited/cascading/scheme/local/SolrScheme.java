@@ -78,7 +78,6 @@ public class SolrScheme extends Scheme<Properties, InputStream, OutputStream, Vo
         String path = os.asDirectory();
 
         // Set context to be the embedded solr server (or rather a wrapper for it, that handles caching)
-        // TODO this call gets made BEFORE sinkConfInit, so I don't have the _dataDir set up at this point, which seems wrong.
         SolrCollector collector = new SolrCollector(flowProcess, getSinkFields(), _solrCoreDir, _maxSegments, _dataDirPropertyName, path);
         sinkCall.setContext(collector);
     }

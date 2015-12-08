@@ -37,6 +37,16 @@ public class SolrSchemeUtil {
         return tmpSolrHome;
     }
     
+    public static void setSolrConfigProperties(String dataDirPropertyName, String dataDir) {
+        System.setProperty(dataDirPropertyName, dataDir);
+        System.setProperty("enable.special-handlers", "false"); // All we need is the update request handler
+        System.setProperty("enable.cache-warming", "false"); // We certainly don't need to warm the cache
+        
+        // Don't use MMapDirectory, as that makes Hadoop 2/YARN think that we're using huge amounts of
+        // permanent memory (the memory-mapped index files look like perm-mem that's "owned" by us).
+        System.setProperty("solr.directoryFactory", "solr.SimpleFSDirectoryFactory");
+    }
+    
     public static void validate(File solrCoreDir, String dataDirPropertyName, Fields schemeFields) throws IOException {
         
         // Verify solrHomeDir exists
@@ -61,9 +71,7 @@ public class SolrSchemeUtil {
         File tmpDataDir = new File(tmpFolder, UUID.randomUUID().toString());
         tmpDataDir.mkdir();
         
-        System.setProperty(dataDirPropertyName, tmpDataDir.getAbsolutePath());
-        System.setProperty("enable.special-handlers", "false"); // All we need is the update request handler
-        System.setProperty("enable.cache-warming", "false"); // We certainly don't need to warm the cache
+        setSolrConfigProperties(dataDirPropertyName, tmpDataDir.getAbsolutePath());
         
         CoreContainer coreContainer = new CoreContainer(tmpSolrHome.getAbsolutePath());
         
