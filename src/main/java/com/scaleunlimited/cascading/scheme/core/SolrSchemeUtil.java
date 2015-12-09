@@ -66,6 +66,10 @@ public class SolrSchemeUtil {
         System.setProperty("enable.special-handlers", "false"); // All we need is the update request handler
         System.setProperty("enable.cache-warming", "false"); // We certainly don't need to warm the cache
         
+        // Don't use MMapDirectory, as that makes Hadoop 2/YARN think that we're using huge amounts of
+        // permanent memory (the memory-mapped index files look like perm-mem that's "owned" by us).
+        System.setProperty("solr.directoryFactory", "solr.SimpleFSDirectoryFactory");
+        
         CoreContainer.Initializer initializer = new CoreContainer.Initializer();
         CoreContainer coreContainer = null;
         
