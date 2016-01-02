@@ -21,7 +21,6 @@ import cascading.tuple.Fields;
 import cascading.tuple.Tuple;
 
 import com.scaleunlimited.cascading.scheme.core.KeepAliveHook;
-import com.scaleunlimited.cascading.scheme.core.SolrSchemeUtil;
 import com.scaleunlimited.cascading.scheme.core.SolrWriter;
 
 public class SolrOutputFormat extends FileOutputFormat<Tuple, Tuple> {
@@ -49,7 +48,8 @@ public class SolrOutputFormat extends FileOutputFormat<Tuple, Tuple> {
             Path sourcePath = new Path(conf.get(SOLR_CORE_PATH_KEY));
             String coreName = sourcePath.getName();
             String tmpDir = System.getProperty("java.io.tmpdir");
-            File localSolrCore = new File(tmpDir, "cascading.solr-" + UUID.randomUUID() + "/" + coreName);
+            File localSolrWorking = new File(tmpDir, "cascading.solr-" + UUID.randomUUID());
+            File localSolrCore = new File(localSolrWorking, coreName);
             FileSystem sourceFS = sourcePath.getFileSystem(conf);
             sourceFS.copyToLocalFile(sourcePath, new Path(localSolrCore.getAbsolutePath()));
             
@@ -62,14 +62,12 @@ public class SolrOutputFormat extends FileOutputFormat<Tuple, Tuple> {
             
             int maxSegments = conf.getInt(MAX_SEGMENTS_KEY, DEFAULT_MAX_SEGMENTS);
             
+            // What property name is used for the data directory location (in solrconfig.xml)
             String dataDirPropertyName = conf.get(DATA_DIR_PROPERTY_NAME_KEY);
             
-            // Set up local Solr home.
-            File localSolrHome = SolrSchemeUtil.makeTempSolrHome(localSolrCore);
-
-            // This is where data will wind up, inside of an index subdir.
-            _localIndexDir = new File(localSolrHome, "data");
-
+            // Set up location for data (temp "working" dir, with sub-dir "data")
+            _localIndexDir = new File(localSolrWorking, "data");
+            
             _keepAliveHook = new HadoopKeepAliveHook(progress);
             
             _solrWriter = new SolrWriter(_keepAliveHook, sinkFields, dataDirPropertyName, _localIndexDir.getAbsolutePath(), localSolrCore, maxSegments) { };

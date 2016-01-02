@@ -146,6 +146,7 @@ public abstract class AbstractSolrSchemeTest extends Assert {
         flow.complete();
 
         // Open up the Solr index, and do some searches.
+        // TODO switch to new way of initializing Container
         System.setProperty("solr.solr.home", SOLR_HOME_DIR);
         System.setProperty("solr.data.dir", out + "/part-00000");
         CoreContainer.Initializer initializer = new CoreContainer.Initializer();

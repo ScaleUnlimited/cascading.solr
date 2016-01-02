@@ -40,17 +40,7 @@ public abstract class SolrWriter {
 
         // Fire up an embedded Solr server
         try {
-            System.setProperty("solr.solr.home", SolrSchemeUtil.makeTempSolrHome(solrCoreDir).getAbsolutePath());
-            System.setProperty(dataDirPropertyName, dataDir);
-            System.setProperty("enable.special-handlers", "false"); // All we need is the update request handler
-            System.setProperty("enable.cache-warming", "false"); // We certainly don't need to warm the cache
-        
-            // Don't use MMapDirectory, as that makes Hadoop 2/YARN think that we're using huge amounts of
-            // permanent memory (the memory-mapped index files look like perm-mem that's "owned" by us).
-            System.setProperty("solr.directoryFactory", "solr.SimpleFSDirectoryFactory");
-            
-            CoreContainer.Initializer initializer = new CoreContainer.Initializer();
-            _coreContainer = initializer.initialize();
+            _coreContainer = SolrSchemeUtil.makeCoreContainer(solrCoreDir, dataDirPropertyName, new File(dataDir));
             _solrServer = new EmbeddedSolrServer(_coreContainer, solrCoreDir.getName());
         } catch (Exception e) {
             if (_coreContainer != null) {

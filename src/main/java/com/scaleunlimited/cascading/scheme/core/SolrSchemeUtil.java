@@ -1,10 +1,12 @@
 package com.scaleunlimited.cascading.scheme.core;
 
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Map;
+import java.util.Properties;
 import java.util.Set;
 import java.util.UUID;
 
@@ -21,20 +23,47 @@ public class SolrSchemeUtil {
 
     public static final String DEFAULT_DATA_DIR_PROPERTY_NAME = "solr.data.dir";
 
-    public static File makeTempSolrHome(File solrCoreDir) throws IOException {
+    public static File makeTempSolrHome(File solrCoreDir, String dataDirPropertyName, File dataDir) throws IOException {
         String tmpFolder = System.getProperty("java.io.tmpdir");
         File tmpSolrHome = new File(tmpFolder, UUID.randomUUID().toString());
         
         // Set up a temp location for Solr home, where we're write out a synthetic solr.xml
         // that references the core directory.
         String coreName = solrCoreDir.getName();
-        String corePath = solrCoreDir.getAbsolutePath();
+        File tmpSolrCoreDir = new File(tmpSolrHome, coreName);
+        FileUtils.copyDirectory(solrCoreDir, tmpSolrCoreDir);
+        
         String solrXmlContent = String.format("<solr><cores><core name=\"%s\" instanceDir=\"%s\"></core></cores></solr>",
-                                              coreName, corePath);
+                                              coreName, tmpSolrCoreDir.getAbsolutePath());
         File solrXmlFile = new File(tmpSolrHome, "solr.xml");
         FileUtils.write(solrXmlFile, solrXmlContent);
 
+        // Write out data dir location property, so we don't use a system property
+        File confDir = new File(tmpSolrCoreDir, "conf");
+        confDir.mkdirs();
+        File confPropertiesFile = new File(confDir, "solrcore.properties");
+        
+        Properties p = new Properties();
+        p.setProperty(dataDirPropertyName, dataDir.getAbsolutePath());
+        FileOutputStream fos = new FileOutputStream(confPropertiesFile);
+        p.store(fos, null);
+        fos.close();
+
         return tmpSolrHome;
+    }
+    
+    public static CoreContainer makeCoreContainer(File solrCoreDir, String dataDirPropertyName, File dataDir) throws IOException {
+        File solrHomeDir = SolrSchemeUtil.makeTempSolrHome(solrCoreDir, dataDirPropertyName, dataDir);
+        File configFile = new File(solrHomeDir, "solr.xml");
+        
+        System.setProperty("enable.special-handlers", "false"); // All we need is the update request handler
+        System.setProperty("enable.cache-warming", "false"); // We certainly don't need to warm the cache
+    
+        // Don't use MMapDirectory, as that makes Hadoop 2/YARN think that we're using huge amounts of
+        // permanent memory (the memory-mapped index files look like perm-mem that's "owned" by us).
+        System.setProperty("solr.directoryFactory", "solr.SimpleFSDirectoryFactory");
+        
+        return new CoreContainer(solrHomeDir.getAbsolutePath(), configFile);
     }
     
     public static void validate(File solrCoreDir, String dataDirPropertyName, Fields schemeFields) throws IOException {
@@ -44,37 +73,16 @@ public class SolrSchemeUtil {
             throw new TapException("Solr core directory doesn't exist: " + solrCoreDir);
         }
         
-        File tmpSolrHome = makeTempSolrHome(solrCoreDir);
-        
-        // Set up a temp location for Solr home, where we're write out a synthetic solr.xml
-        // that references the core directory.
-        String coreName = solrCoreDir.getName();
-        String corePath = solrCoreDir.getAbsolutePath();
-        String solrXmlContent = String.format("<solr><cores><core name=\"%s\" instanceDir=\"%s\"></core></cores></solr>",
-                                              coreName, corePath);
-        File solrXmlFile = new File(tmpSolrHome, "solr.xml");
-        FileUtils.write(solrXmlFile, solrXmlContent);
-        
         // Set up a temp location for data, so when we instantiate the coreContainer,
         // we don't pollute the solr home with a /data sub-dir.
         String tmpFolder = System.getProperty("java.io.tmpdir");
-        File tmpDataDir = new File(tmpFolder, UUID.randomUUID().toString());
+        File tmpDataDir = new File(tmpFolder, "cascading.solr-" + UUID.randomUUID());
         tmpDataDir.mkdir();
-        
-        System.setProperty("solr.solr.home", tmpSolrHome.getAbsolutePath());
-        System.setProperty(dataDirPropertyName, tmpDataDir.getAbsolutePath());
-        System.setProperty("enable.special-handlers", "false"); // All we need is the update request handler
-        System.setProperty("enable.cache-warming", "false"); // We certainly don't need to warm the cache
-        
-        // Don't use MMapDirectory, as that makes Hadoop 2/YARN think that we're using huge amounts of
-        // permanent memory (the memory-mapped index files look like perm-mem that's "owned" by us).
-        System.setProperty("solr.directoryFactory", "solr.SimpleFSDirectoryFactory");
-        
-        CoreContainer.Initializer initializer = new CoreContainer.Initializer();
+
         CoreContainer coreContainer = null;
         
         try {
-            coreContainer = initializer.initialize();
+            coreContainer = makeCoreContainer(solrCoreDir, dataDirPropertyName, tmpDataDir);
             Collection<SolrCore> cores = coreContainer.getCores();
             SolrCore core = null;
             
