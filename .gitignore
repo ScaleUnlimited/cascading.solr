@@ -16,3 +16,4 @@ private
 junit*.properties
 aws-keys.txt
 .externalToolBuilders
+.idea/
