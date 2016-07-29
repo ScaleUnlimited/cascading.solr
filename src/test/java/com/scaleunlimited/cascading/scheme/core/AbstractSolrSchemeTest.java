@@ -32,7 +32,7 @@ import com.scaleunlimited.cascading.scheme.local.SolrScheme;
 
 public abstract class AbstractSolrSchemeTest extends Assert {
 
-    private static final String SOLR_HOME_DIR = "src/test/resources/solr-home-4.1/"; 
+    private static final String SOLR_HOME_DIR = "src/test/resources/solr-home-5.5/";
     protected static final String SOLR_CORE_DIR = SOLR_HOME_DIR + "collection1"; 
 
     protected abstract String getTestDir();
