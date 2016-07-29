@@ -5,7 +5,7 @@ import java.io.IOException;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.io.BytesWritable;
-import org.apache.solr.client.solrj.SolrServer;
+import org.apache.solr.client.solrj.SolrClient;
 import org.apache.solr.client.solrj.embedded.EmbeddedSolrServer;
 import org.apache.solr.client.solrj.response.QueryResponse;
 import org.apache.solr.common.params.CommonParams;
@@ -150,28 +150,28 @@ public abstract class AbstractSolrSchemeTest extends Assert {
 
         CoreContainer coreContainer = new CoreContainer(SOLR_HOME_DIR);
         coreContainer.load();
-        SolrServer solrServer = new EmbeddedSolrServer(coreContainer, "");
+        SolrClient solrClient = new EmbeddedSolrServer(coreContainer, "collection1");
 
         ModifiableSolrParams params = new ModifiableSolrParams();
         params.set(CommonParams.Q, "turbowriter");
 
-        QueryResponse res = solrServer.query(params);
+        QueryResponse res = solrClient.query(params);
         assertEquals(1, res.getResults().size());
         byte[] storedImageData = (byte[])res.getResults().get(0).getFieldValue("image");
         assertEquals(imageData, storedImageData);
         
         params.set(CommonParams.Q, "cat:Japanese");
-        res = solrServer.query(params);
+        res = solrClient.query(params);
         assertEquals(1, res.getResults().size());
         
         params.set(CommonParams.Q, "cat:Chinese");
-        res = solrServer.query(params);
+        res = solrClient.query(params);
         assertEquals(1, res.getResults().size());
         storedImageData = (byte[])res.getResults().get(0).getFieldValue("image");
         assertEquals(imageData, storedImageData);
         
         params.set(CommonParams.Q, "bogus");
-        res = solrServer.query(params);
+        res = solrClient.query(params);
         assertEquals(0, res.getResults().size());
     }
 

@@ -2,6 +2,7 @@ package com.scaleunlimited.cascading.scheme.core;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.URL;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Map;
@@ -24,15 +25,12 @@ public class SolrSchemeUtil {
     public static File makeTempSolrHome(File solrCoreDir) throws IOException {
         String tmpFolder = System.getProperty("java.io.tmpdir");
         File tmpSolrHome = new File(tmpFolder, UUID.randomUUID().toString());
-        
+
         // Set up a temp location for Solr home, where we're write out a synthetic solr.xml
-        // that references the core directory.
-        String coreName = solrCoreDir.getName();
-        String corePath = solrCoreDir.getAbsolutePath();
-        String solrXmlContent = String.format("<solr><cores><core name=\"%s\" instanceDir=\"%s\"></core></cores></solr>",
-                                              coreName, corePath);
+        URL solrXmlContent = SolrSchemeUtil.class.getResource("default-solr.xml");
         File solrXmlFile = new File(tmpSolrHome, "solr.xml");
-        FileUtils.write(solrXmlFile, solrXmlContent);
+        FileUtils.copyURLToFile(solrXmlContent, solrXmlFile);
+        FileUtils.copyDirectory(solrCoreDir, new File(tmpSolrHome, solrCoreDir.getName()));
 
         return tmpSolrHome;
     }
@@ -45,16 +43,7 @@ public class SolrSchemeUtil {
         }
         
         File tmpSolrHome = makeTempSolrHome(solrCoreDir);
-        
-        // Set up a temp location for Solr home, where we're write out a synthetic solr.xml
-        // that references the core directory.
-        String coreName = solrCoreDir.getName();
-        String corePath = solrCoreDir.getAbsolutePath();
-        String solrXmlContent = String.format("<solr><cores><core name=\"%s\" instanceDir=\"%s\"></core></cores></solr>",
-                                              coreName, corePath);
-        File solrXmlFile = new File(tmpSolrHome, "solr.xml");
-        FileUtils.write(solrXmlFile, solrXmlContent);
-        
+
         // Set up a temp location for data, so when we instantiate the coreContainer,
         // we don't pollute the solr home with a /data sub-dir.
         String tmpFolder = System.getProperty("java.io.tmpdir");
