@@ -81,20 +81,19 @@ public class SolrSchemeUtil {
             }
 
             IndexSchema schema = core.getLatestSchema();
-            Map<String, SchemaField> solrFields = schema.getFields();
             Set<String> schemeFieldnames = new HashSet<String>();
 
             for (int i = 0; i < schemeFields.size(); i++) {
                 String fieldName = schemeFields.get(i).toString();
-                if (!solrFields.containsKey(fieldName)) {
+                if (schema.getFieldOrNull(fieldName) == null) {
                     throw new TapException("Sink field name doesn't exist in Solr schema: " + fieldName);
                 }
-                
                 schemeFieldnames.add(fieldName);
             }
 
-            for (String solrFieldname : solrFields.keySet()) {
-                SchemaField solrField = solrFields.get(solrFieldname);
+            for (Map.Entry<String, SchemaField> e : schema.getFields().entrySet()) {
+                String solrFieldname = e.getKey();
+                SchemaField solrField = e.getValue();
                 if (solrField.isRequired() && !schemeFieldnames.contains(solrFieldname)) {
                     throw new TapException("No sink field name for required Solr field: " + solrFieldname);
                 }
