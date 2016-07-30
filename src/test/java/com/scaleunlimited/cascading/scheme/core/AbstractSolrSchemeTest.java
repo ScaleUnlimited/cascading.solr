@@ -107,7 +107,18 @@ public abstract class AbstractSolrSchemeTest extends Assert {
     }
     
     protected void testSimpleIndexing() throws Exception {
-        final Fields testFields = new Fields("id", "name", "price", "cat", "inStock", "image");
+        final Fields testFields = new Fields(
+                "id",
+                "name",
+                "price",
+                "cat",
+                "inStock",
+                "image",
+
+                // These are Solr dynamic fields
+                "foo_txt",
+                "bar_txt"
+        );
 
         final String in = getTestDir() + "testSimpleIndexing/in";
         final String out = getTestDir() + "testSimpleIndexing/out";
@@ -123,6 +134,8 @@ public abstract class AbstractSolrSchemeTest extends Assert {
         t.add(new Tuple("wordprocessor", "Japanese"));
         t.add(true);
         t.add(imageData);
+        t.add("Some text");
+        t.add("Some more text");
         write.add(t);
         
         t = new Tuple();
@@ -135,6 +148,11 @@ public abstract class AbstractSolrSchemeTest extends Assert {
         BytesWritable bw = new BytesWritable(imageData);
         bw.setCapacity(imageData.length + 10);
         t.add(bw);
+        t.add("Four score and seven years ago our fathers brought forth on "
+                      + "this continent, a new nation, conceived in Liberty, "
+                      + "and dedicated to the proposition that all men are "
+                      + "created equal.");
+        t.add("Ceci n'est pas une épreuve");
         write.add(t);
         write.close();
 
