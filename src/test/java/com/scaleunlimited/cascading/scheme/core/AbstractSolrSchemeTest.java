@@ -5,7 +5,7 @@ import java.io.IOException;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.io.BytesWritable;
-import org.apache.solr.client.solrj.SolrServer;
+import org.apache.solr.client.solrj.SolrClient;
 import org.apache.solr.client.solrj.embedded.EmbeddedSolrServer;
 import org.apache.solr.client.solrj.response.QueryResponse;
 import org.apache.solr.common.params.CommonParams;
@@ -32,7 +32,7 @@ import com.scaleunlimited.cascading.scheme.local.SolrScheme;
 
 public abstract class AbstractSolrSchemeTest extends Assert {
 
-    private static final String SOLR_HOME_DIR = "src/test/resources/solr-home-4.1/"; 
+    private static final String SOLR_HOME_DIR = "src/test/resources/solr-home-5.5/";
     protected static final String SOLR_CORE_DIR = SOLR_HOME_DIR + "collection1"; 
 
     protected abstract String getTestDir();
@@ -150,28 +150,28 @@ public abstract class AbstractSolrSchemeTest extends Assert {
 
         CoreContainer coreContainer = new CoreContainer(SOLR_HOME_DIR);
         coreContainer.load();
-        SolrServer solrServer = new EmbeddedSolrServer(coreContainer, "");
+        SolrClient solrClient = new EmbeddedSolrServer(coreContainer, "collection1");
 
         ModifiableSolrParams params = new ModifiableSolrParams();
         params.set(CommonParams.Q, "turbowriter");
 
-        QueryResponse res = solrServer.query(params);
+        QueryResponse res = solrClient.query(params);
         assertEquals(1, res.getResults().size());
         byte[] storedImageData = (byte[])res.getResults().get(0).getFieldValue("image");
         assertEquals(imageData, storedImageData);
         
         params.set(CommonParams.Q, "cat:Japanese");
-        res = solrServer.query(params);
+        res = solrClient.query(params);
         assertEquals(1, res.getResults().size());
         
         params.set(CommonParams.Q, "cat:Chinese");
-        res = solrServer.query(params);
+        res = solrClient.query(params);
         assertEquals(1, res.getResults().size());
         storedImageData = (byte[])res.getResults().get(0).getFieldValue("image");
         assertEquals(imageData, storedImageData);
         
         params.set(CommonParams.Q, "bogus");
-        res = solrServer.query(params);
+        res = solrClient.query(params);
         assertEquals(0, res.getResults().size());
     }
 

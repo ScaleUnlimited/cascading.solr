@@ -4,7 +4,7 @@ import java.io.File;
 import java.io.IOException;
 
 import org.apache.hadoop.io.BytesWritable;
-import org.apache.solr.client.solrj.SolrServer;
+import org.apache.solr.client.solrj.SolrClient;
 import org.apache.solr.client.solrj.SolrServerException;
 import org.apache.solr.client.solrj.embedded.EmbeddedSolrServer;
 import org.apache.solr.common.SolrInputDocument;
@@ -25,7 +25,7 @@ public abstract class SolrWriter {
     private int _maxSegments;
     
     private transient CoreContainer _coreContainer;
-    private transient SolrServer _solrServer;
+    private transient SolrClient _solrClient;
     private transient BinaryUpdateRequest _updateRequest;
 
     public SolrWriter(KeepAliveHook keepAlive, Fields sinkFields, String dataDirPropertyName, String dataDir, File solrCoreDir, int maxSegments) throws IOException {
@@ -46,7 +46,7 @@ public abstract class SolrWriter {
             File solrHome = SolrSchemeUtil.makeTempSolrHome(solrCoreDir);
             _coreContainer = new CoreContainer(solrHome.getAbsolutePath());
             _coreContainer.load();
-            _solrServer = new EmbeddedSolrServer(_coreContainer, solrCoreDir.getName());
+            _solrClient = new EmbeddedSolrServer(_coreContainer, solrCoreDir.getName());
         } catch (Exception e) {
             if (_coreContainer != null) {
                 _coreContainer.shutdown();
@@ -105,11 +105,11 @@ public abstract class SolrWriter {
             Thread reporterThread = startProgressThread();
 
             try {
-                _updateRequest.process(_solrServer);
+                _updateRequest.process(_solrClient);
                 
                 if (force) {
-                    _solrServer.commit(true, true);
-                    _solrServer.optimize(true, true, _maxSegments);
+                    _solrClient.commit(true, true);
+                    _solrClient.optimize(true, true, _maxSegments);
                 }
             } catch (SolrServerException e) {
                 throw new IOException(e);
@@ -124,7 +124,7 @@ public abstract class SolrWriter {
     public void cleanup() throws IOException {
         flushInputDocuments(true);
         _coreContainer.shutdown();
-        _solrServer = null;
+        _solrClient = null;
     }
     
     /**

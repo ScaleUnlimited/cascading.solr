@@ -7,7 +7,7 @@
 	<artifactId>cascading.solr</artifactId>
 	<name>Cascading Scheme for Apache Solr</name>
 	<packaging>jar</packaging>
-	<version>2.6-SNAPSHOT</version>
+	<version>3.0-SNAPSHOT</version>
 	<description>Cascading Scheme for creating Lucene indexes using Solr</description>
 	<url>http://github.com/ScaleUnlimited/cascading.solr</url>
 	<issueManagement>
@@ -32,11 +32,27 @@
 			<url>http://conjars.org/repo/</url>
 		</repository>
 	</repositories>
-	
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.5.1</version>
+                <configuration>
+                    <source>1.7</source>
+                    <target>1.7</target>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+
     <properties>
-        <cascading.version>2.5.6</cascading.version>
-        <hadoop.version>2.2.0</hadoop.version>
-        <solr.version>4.10.1</solr.version>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+
+        <cascading.version>2.7.1</cascading.version>
+        <hadoop.version>2.7.2</hadoop.version>
+        <solr.version>5.5.2</solr.version>
     </properties>
     
 	<dependencies>
@@ -92,6 +108,12 @@
         
         <dependency>
             <groupId>org.apache.hadoop</groupId>
+            <artifactId>hadoop-common</artifactId>
+            <version>${hadoop.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.apache.hadoop</groupId>
             <artifactId>hadoop-client</artifactId>
             <version>${hadoop.version}</version>
         </dependency>
@@ -101,7 +123,13 @@
             <artifactId>jackson-mapper-asl</artifactId>
             <version>1.8.3</version>
         </dependency>
-        
+
+        <dependency>
+            <groupId>commons-io</groupId>
+            <artifactId>commons-io</artifactId>
+            <version>2.4</version>
+        </dependency>
+
         <!-- Test -->
         
 		<dependency>

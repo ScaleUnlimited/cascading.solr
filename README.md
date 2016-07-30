@@ -40,7 +40,7 @@ An example of using this SolrScheme (taken from `SolrSchemeHadoopTest.java` and 
 
 ```java
     private static final String TEST_DIR = "build/test/SolrSchemeHadoopTest/";
-    private static final String SOLR_HOME_DIR = "src/test/resources/solr-home-4.1/"; 
+    private static final String SOLR_HOME_DIR = "src/test/resources/solr-home-5.5/"; 
     protected static final String SOLR_CORE_DIR = SOLR_HOME_DIR + "collection1"; 
 
     @Test
