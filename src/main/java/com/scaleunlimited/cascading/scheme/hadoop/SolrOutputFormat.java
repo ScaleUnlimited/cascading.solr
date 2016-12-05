@@ -105,6 +105,19 @@ public class SolrOutputFormat extends FileOutputFormat<Tuple, Tuple> {
             try {
                 long indexSize = FileUtils.sizeOfDirectory(indexDir);
                 LOGGER.info(String.format("Copying %d bytes of index from %s to %s", indexSize, _localIndexDir, _outputPath));
+                
+                // TODO Remove this debugging code that we're using to help
+                // track down why we sometimes end up with a corrupt shard
+                // in one of the main Adbeat indexes.
+                LOGGER.info("Details:");
+                String indexFileNames[] = indexDir.list();
+                for (String indexFileName : indexFileNames) {
+                    File indexFile = new File(indexDir, indexFileName);
+                    LOGGER.info(String.format(  "\t%s (%d bytes)",
+                                                indexFile.getAbsolutePath(), 
+                                                indexFile.length()));
+                }
+                
                 _outputFS.copyFromLocalFile(true, new Path(indexDir.getAbsolutePath()), _outputPath);
             } finally {
                 reporterThread.interrupt();
