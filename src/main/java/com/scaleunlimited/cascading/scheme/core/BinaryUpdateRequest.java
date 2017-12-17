@@ -47,9 +47,10 @@ public class BinaryUpdateRequest extends UpdateRequest {
     }
     
     /**
+     * @return 
      * @since solr 1.4
      */
-    public void writeXML( Writer writer ) throws IOException {
+    public UpdateRequest writeXML( Writer writer ) throws IOException {
         throw new IllegalStateException("Can't write XML when using binary protocol");
     }
 

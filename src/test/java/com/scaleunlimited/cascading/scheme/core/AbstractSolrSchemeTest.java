@@ -5,7 +5,6 @@ import java.io.IOException;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.io.BytesWritable;
-import org.apache.solr.client.solrj.SolrServer;
 import org.apache.solr.client.solrj.embedded.EmbeddedSolrServer;
 import org.apache.solr.client.solrj.response.QueryResponse;
 import org.apache.solr.common.params.CommonParams;
@@ -32,8 +31,8 @@ import com.scaleunlimited.cascading.scheme.local.SolrScheme;
 
 public abstract class AbstractSolrSchemeTest extends Assert {
 
-    private static final String SOLR_HOME_DIR = "src/test/resources/solr-home-4.1/"; 
-    protected static final String SOLR_CORE_DIR = SOLR_HOME_DIR + "collection1"; 
+    private static final String SOLR_HOME_DIR = "src/test/resources/solr-home-6.6.2/"; 
+    protected static final String SOLR_CORE_DIR = SOLR_HOME_DIR + "cores/testcore"; 
 
     protected abstract String getTestDir();
     
@@ -106,6 +105,7 @@ public abstract class AbstractSolrSchemeTest extends Assert {
         writer.close();
     }
     
+    @SuppressWarnings({ "rawtypes", "unchecked" })
     protected void testSimpleIndexing() throws Exception {
         final Fields testFields = new Fields("id", "name", "price", "cat", "inStock", "image");
 
@@ -148,12 +148,13 @@ public abstract class AbstractSolrSchemeTest extends Assert {
         // Open up the Solr index, and do some searches.
         System.setProperty("solr.data.dir", out + "/part-00000");
 
+        File coreDir = new File(SOLR_CORE_DIR);
         CoreContainer coreContainer = new CoreContainer(SOLR_HOME_DIR);
         coreContainer.load();
-        SolrServer solrServer = new EmbeddedSolrServer(coreContainer, "");
+        EmbeddedSolrServer solrServer = new EmbeddedSolrServer(coreContainer, coreDir.getName());
 
         ModifiableSolrParams params = new ModifiableSolrParams();
-        params.set(CommonParams.Q, "turbowriter");
+        params.set(CommonParams.Q, "name:turbowriter");
 
         QueryResponse res = solrServer.query(params);
         assertEquals(1, res.getResults().size());
@@ -173,6 +174,8 @@ public abstract class AbstractSolrSchemeTest extends Assert {
         params.set(CommonParams.Q, "bogus");
         res = solrServer.query(params);
         assertEquals(0, res.getResults().size());
+        
+        solrServer.close();
     }
 
 

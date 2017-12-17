@@ -4,7 +4,6 @@ import java.io.File;
 import java.io.IOException;
 
 import org.apache.hadoop.io.BytesWritable;
-import org.apache.solr.client.solrj.SolrServer;
 import org.apache.solr.client.solrj.SolrServerException;
 import org.apache.solr.client.solrj.embedded.EmbeddedSolrServer;
 import org.apache.solr.common.SolrInputDocument;
@@ -25,7 +24,7 @@ public abstract class SolrWriter {
     private int _maxSegments;
     
     private transient CoreContainer _coreContainer;
-    private transient SolrServer _solrServer;
+    private transient EmbeddedSolrServer _solrServer;
     private transient BinaryUpdateRequest _updateRequest;
 
     public SolrWriter(KeepAliveHook keepAlive, Fields sinkFields, String dataDirPropertyName, String dataDir, File solrCoreDir, int maxSegments) throws IOException {

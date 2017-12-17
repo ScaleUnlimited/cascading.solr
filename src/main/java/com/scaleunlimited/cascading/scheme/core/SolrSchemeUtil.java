@@ -27,12 +27,23 @@ public class SolrSchemeUtil {
         
         // Set up a temp location for Solr home, where we're write out a synthetic solr.xml
         // that references the core directory.
-        String coreName = solrCoreDir.getName();
-        String corePath = solrCoreDir.getAbsolutePath();
-        String solrXmlContent = String.format("<solr><cores><core name=\"%s\" instanceDir=\"%s\"></core></cores></solr>",
-                                              coreName, corePath);
         File solrXmlFile = new File(tmpSolrHome, "solr.xml");
-        FileUtils.write(solrXmlFile, solrXmlContent);
+        FileUtils.write(solrXmlFile, "<solr></solr>", "UTF-8");
+        File coresDir = new File(tmpSolrHome, "cores");
+        File coreDir = new File(coresDir, solrCoreDir.getName());
+        coreDir.mkdirs();
+        File coreProps = new File(coreDir, "core.properties");
+        
+        // TODO copy the conf files over to the core dir
+        File srcConfDir = new File(solrCoreDir, "conf");
+        if (!srcConfDir.exists()) {
+            throw new TapException("Solr conf directory doesn't exist: " + srcConfDir);
+        }
+            
+        File destDir = new File(coreDir, "conf");
+        FileUtils.copyDirectory(srcConfDir, destDir);
+        String coreContent = String.format("name=%s", solrCoreDir.getName());
+        FileUtils.write(coreProps, coreContent, "UTF-8");
 
         return tmpSolrHome;
     }
@@ -45,15 +56,6 @@ public class SolrSchemeUtil {
         }
         
         File tmpSolrHome = makeTempSolrHome(solrCoreDir);
-        
-        // Set up a temp location for Solr home, where we're write out a synthetic solr.xml
-        // that references the core directory.
-        String coreName = solrCoreDir.getName();
-        String corePath = solrCoreDir.getAbsolutePath();
-        String solrXmlContent = String.format("<solr><cores><core name=\"%s\" instanceDir=\"%s\"></core></cores></solr>",
-                                              coreName, corePath);
-        File solrXmlFile = new File(tmpSolrHome, "solr.xml");
-        FileUtils.write(solrXmlFile, solrXmlContent);
         
         // Set up a temp location for data, so when we instantiate the coreContainer,
         // we don't pollute the solr home with a /data sub-dir.
