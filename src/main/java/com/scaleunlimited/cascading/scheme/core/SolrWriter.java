@@ -27,7 +27,7 @@ public abstract class SolrWriter {
     private transient EmbeddedSolrServer _solrServer;
     private transient BinaryUpdateRequest _updateRequest;
 
-    public SolrWriter(KeepAliveHook keepAlive, Fields sinkFields, String dataDirPropertyName, String dataDir, File solrCoreDir, int maxSegments) throws IOException {
+    public SolrWriter(KeepAliveHook keepAlive, Fields sinkFields, String dataDirPropertyName, String dataDir, File solrConfDir, int maxSegments) throws IOException {
         _keepAlive = keepAlive;
         _sinkFields = sinkFields;
         _maxSegments = maxSegments;
@@ -42,10 +42,10 @@ public abstract class SolrWriter {
             System.setProperty(dataDirPropertyName, dataDir);
             System.setProperty("enable.special-handlers", "false"); // All we need is the update request handler
             System.setProperty("enable.cache-warming", "false"); // We certainly don't need to warm the cache
-            File solrHome = SolrSchemeUtil.makeTempSolrHome(solrCoreDir);
+            File solrHome = SolrSchemeUtil.makeTempSolrHome(solrConfDir);
             _coreContainer = new CoreContainer(solrHome.getAbsolutePath());
             _coreContainer.load();
-            _solrServer = new EmbeddedSolrServer(_coreContainer, solrCoreDir.getName());
+            _solrServer = new EmbeddedSolrServer(_coreContainer, SolrSchemeUtil.CORE_DIR_NAME);
         } catch (Exception e) {
             if (_coreContainer != null) {
                 _coreContainer.shutdown();

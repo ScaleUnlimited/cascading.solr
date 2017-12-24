@@ -37,7 +37,7 @@ public class SolrSchemeLocalTest extends AbstractSolrSchemeTest {
     
     @Override
     protected Tap<?, ?, ?> makeSolrSink(Fields fields, String path) throws Exception {
-        return new DirectoryTap(new SolrScheme(fields, SOLR_CORE_DIR), path);
+        return new DirectoryTap(new SolrScheme(fields, SOLR_CONF_DIR), path);
     }
     
     @Override
@@ -46,18 +46,18 @@ public class SolrSchemeLocalTest extends AbstractSolrSchemeTest {
     }
     
     @Override
-    protected cascading.scheme.Scheme<?,?,?,?,?> makeScheme(Fields schemeFields, String solrCoreDir) throws Exception {
-        return new SolrScheme(schemeFields, solrCoreDir);
+    protected cascading.scheme.Scheme<?,?,?,?,?> makeScheme(Fields schemeFields, String solrConfDir) throws Exception {
+        return new SolrScheme(schemeFields, solrConfDir);
     }
     
     @Override
-    protected Scheme<?, ?, ?, ?, ?> makeScheme(Fields schemeFields, String solrCoreDir, int maxSegments) throws Exception {
-        return new SolrScheme(schemeFields, solrCoreDir, maxSegments);
+    protected Scheme<?, ?, ?, ?, ?> makeScheme(Fields schemeFields, String solrConfDir, int maxSegments) throws Exception {
+        return new SolrScheme(schemeFields, solrConfDir, maxSegments);
     }
     
     @Override
-    protected Scheme<?, ?, ?, ?, ?> makeScheme(Fields schemeFields, String solrCoreDir, int maxSegments, String dataDirPropertyName) throws Exception {
-        return new SolrScheme(schemeFields, solrCoreDir, maxSegments, dataDirPropertyName);
+    protected Scheme<?, ?, ?, ?, ?> makeScheme(Fields schemeFields, String solrConfDir, int maxSegments, String dataDirPropertyName) throws Exception {
+        return new SolrScheme(schemeFields, solrConfDir, maxSegments, dataDirPropertyName);
     }
     
     @Test

@@ -20,8 +20,9 @@ import cascading.tuple.Fields;
 public class SolrSchemeUtil {
 
     public static final String DEFAULT_DATA_DIR_PROPERTY_NAME = "solr.data.dir";
+    public static final String CORE_DIR_NAME = "core";
 
-    public static File makeTempSolrHome(File solrCoreDir) throws IOException {
+    public static File makeTempSolrHome(File solrConfDir) throws IOException {
         String tmpFolder = System.getProperty("java.io.tmpdir");
         File tmpSolrHome = new File(tmpFolder, UUID.randomUUID().toString());
         
@@ -29,33 +30,26 @@ public class SolrSchemeUtil {
         // that references the core directory.
         File solrXmlFile = new File(tmpSolrHome, "solr.xml");
         FileUtils.write(solrXmlFile, "<solr></solr>", "UTF-8");
-        File coresDir = new File(tmpSolrHome, "cores");
-        File coreDir = new File(coresDir, solrCoreDir.getName());
+        File coreDir = new File(tmpSolrHome, CORE_DIR_NAME);
         coreDir.mkdirs();
         File coreProps = new File(coreDir, "core.properties");
-        
-        // TODO copy the conf files over to the core dir
-        File srcConfDir = new File(solrCoreDir, "conf");
-        if (!srcConfDir.exists()) {
-            throw new TapException("Solr conf directory doesn't exist: " + srcConfDir);
-        }
+        coreProps.createNewFile();
             
         File destDir = new File(coreDir, "conf");
-        FileUtils.copyDirectory(srcConfDir, destDir);
-        String coreContent = String.format("name=%s", solrCoreDir.getName());
-        FileUtils.write(coreProps, coreContent, "UTF-8");
+        FileUtils.copyDirectory(solrConfDir, destDir);
 
         return tmpSolrHome;
     }
     
-    public static void validate(File solrCoreDir, String dataDirPropertyName, Fields schemeFields) throws IOException {
+    public static void validate(File solrConfDir, String dataDirPropertyName, Fields schemeFields) throws IOException {
         
-        // Verify solrHomeDir exists
-        if (!solrCoreDir.exists() || !solrCoreDir.isDirectory()) {
-            throw new TapException("Solr core directory doesn't exist: " + solrCoreDir);
+        // Verify solrConfDir exists
+        if (!solrConfDir.exists() || !solrConfDir.isDirectory()) {
+            throw new TapException("Solr conf directory doesn't exist: " + solrConfDir);
         }
         
-        File tmpSolrHome = makeTempSolrHome(solrCoreDir);
+        // Create a temp solr home dir with a solr.xml and core.properties file to work off.
+        File tmpSolrHome = makeTempSolrHome(solrConfDir);
         
         // Set up a temp location for data, so when we instantiate the coreContainer,
         // we don't pollute the solr home with a /data sub-dir.

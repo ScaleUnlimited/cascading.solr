@@ -27,7 +27,7 @@ import com.scaleunlimited.cascading.scheme.core.SolrWriter;
 public class SolrOutputFormat extends FileOutputFormat<Tuple, Tuple> {
     private static final Logger LOGGER = LoggerFactory.getLogger(SolrOutputFormat.class);
     
-    public static final String SOLR_CORE_PATH_KEY = "com.scaleunlimited.cascading.solr.corePath";
+    public static final String SOLR_CONF_PATH_KEY = "com.scaleunlimited.cascading.solr.confPath";
     public static final String SINK_FIELDS_KEY = "com.scaleunlimited.cascading.solr.sinkFields";
     public static final String MAX_SEGMENTS_KEY = "com.scaleunlimited.cascading.solr.maxSegments";
     public static final String DATA_DIR_PROPERTY_NAME_KEY = "com.scaleunlimited.cascading.solr.dataDirPropertyName";
@@ -45,13 +45,13 @@ public class SolrOutputFormat extends FileOutputFormat<Tuple, Tuple> {
         
         public SolrRecordWriter(JobConf conf, String name, Progressable progress) throws IOException {
             
-            // Copy Solr core directory from HDFS to temp local location.
-            Path sourcePath = new Path(conf.get(SOLR_CORE_PATH_KEY));
-            String coreName = sourcePath.getName();
+            // Copy Solr conf directory from HDFS to temp local location.
+            Path sourcePath = new Path(conf.get(SOLR_CONF_PATH_KEY));
+            String confName = sourcePath.getName();
             String tmpDir = System.getProperty("java.io.tmpdir");
-            File localSolrCore = new File(tmpDir, "cascading.solr-" + UUID.randomUUID() + "/" + coreName);
+            File localSolrConf = new File(tmpDir, "cascading.solr-" + UUID.randomUUID() + "/" + confName);
             FileSystem sourceFS = sourcePath.getFileSystem(conf);
-            sourceFS.copyToLocalFile(sourcePath, new Path(localSolrCore.getAbsolutePath()));
+            sourceFS.copyToLocalFile(sourcePath, new Path(localSolrConf.getAbsolutePath()));
             
             // Figure out where ultimately the results need to wind up.
             _outputPath = new Path(FileOutputFormat.getTaskOutputPath(conf, name), "index");
@@ -65,14 +65,14 @@ public class SolrOutputFormat extends FileOutputFormat<Tuple, Tuple> {
             String dataDirPropertyName = conf.get(DATA_DIR_PROPERTY_NAME_KEY);
             
             // Set up local Solr home.
-            File localSolrHome = SolrSchemeUtil.makeTempSolrHome(localSolrCore);
+            File localSolrHome = SolrSchemeUtil.makeTempSolrHome(localSolrConf);
 
             // This is where data will wind up, inside of an index subdir.
             _localIndexDir = new File(localSolrHome, "data");
 
             _keepAliveHook = new HadoopKeepAliveHook(progress);
             
-            _solrWriter = new SolrWriter(_keepAliveHook, sinkFields, dataDirPropertyName, _localIndexDir.getAbsolutePath(), localSolrCore, maxSegments) { };
+            _solrWriter = new SolrWriter(_keepAliveHook, sinkFields, dataDirPropertyName, _localIndexDir.getAbsolutePath(), localSolrConf, maxSegments) { };
         }
         
         @Override
