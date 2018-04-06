@@ -31,24 +31,18 @@ public class SolrScheme extends Scheme<JobConf, RecordReader<Tuple, Tuple>, Outp
 
     private File _solrConfDir;
     private int _maxSegments;
-    private String _dataDirPropertyName;
     
     public SolrScheme(Fields schemeFields, String solrConfDir) throws IOException, ParserConfigurationException, SAXException {
         this(schemeFields, solrConfDir, SolrOutputFormat.DEFAULT_MAX_SEGMENTS);
     }
     
     public SolrScheme(Fields schemeFields, String solrConfDir, int maxSegments) throws IOException, ParserConfigurationException, SAXException {
-        this(schemeFields, solrConfDir, SolrOutputFormat.DEFAULT_MAX_SEGMENTS, SolrSchemeUtil.DEFAULT_DATA_DIR_PROPERTY_NAME);
-    }
-    
-    public SolrScheme(Fields schemeFields, String solrConfDir, int maxSegments, String dataDirPropertyName) throws IOException, ParserConfigurationException, SAXException {
         super(schemeFields, schemeFields);
 
         _solrConfDir = new File(solrConfDir);
         _maxSegments = maxSegments;
-        _dataDirPropertyName = dataDirPropertyName;
 
-        SolrSchemeUtil.validate(_solrConfDir, _dataDirPropertyName, schemeFields);
+        SolrSchemeUtil.validate(_solrConfDir, schemeFields);
     }
     
     @Override
@@ -93,7 +87,6 @@ public class SolrScheme extends Scheme<JobConf, RecordReader<Tuple, Tuple>, Outp
 
         conf.set(SolrOutputFormat.SOLR_CONF_PATH_KEY, hdfsSolrConfDir.toString());
         conf.setInt(SolrOutputFormat.MAX_SEGMENTS_KEY, _maxSegments);
-        conf.set(SolrOutputFormat.DATA_DIR_PROPERTY_NAME_KEY, _dataDirPropertyName);
     }
 
     @Override

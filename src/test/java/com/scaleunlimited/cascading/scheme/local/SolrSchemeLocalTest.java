@@ -55,11 +55,6 @@ public class SolrSchemeLocalTest extends AbstractSolrSchemeTest {
         return new SolrScheme(schemeFields, solrConfDir, maxSegments);
     }
     
-    @Override
-    protected Scheme<?, ?, ?, ?, ?> makeScheme(Fields schemeFields, String solrConfDir, int maxSegments, String dataDirPropertyName) throws Exception {
-        return new SolrScheme(schemeFields, solrConfDir, maxSegments, dataDirPropertyName);
-    }
-    
     @Test
     public void testSchemeChecksMissingConf() throws Exception {
         super.testSchemeChecksMissingConf();

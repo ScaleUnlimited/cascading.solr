@@ -54,11 +54,6 @@ public class SolrSchemeHadoopTest extends AbstractSolrSchemeTest {
         return new SolrScheme(schemeFields, solrConfDir, maxSegments);
     }
     
-    @Override
-    protected Scheme<?, ?, ?, ?, ?> makeScheme(Fields schemeFields, String solrConfDir, int maxSegments, String dataDirPropertyName) throws Exception {
-        return new SolrScheme(schemeFields, solrConfDir, maxSegments, dataDirPropertyName);
-    }
-    
     @SuppressWarnings({ "rawtypes", "unchecked" })
     @Override
     protected Tap<?, ?, ?> makeSolrSink(Fields fields, String path) throws Exception {

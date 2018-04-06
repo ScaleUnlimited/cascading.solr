@@ -45,9 +45,7 @@ public abstract class AbstractSolrSchemeTest extends Assert {
     protected abstract Scheme<?, ?, ?, ?, ?> makeScheme(Fields schemeFields, String solrConfDir) throws Exception;
     
     protected abstract Scheme<?, ?, ?, ?, ?> makeScheme(Fields schemeFields, String solrConfDir, int maxSegments) throws Exception;
-    
-    protected abstract Scheme<?, ?, ?, ?, ?> makeScheme(Fields schemeFields, String solrConfDir, int maxSegments, String dataDirPropertyName) throws Exception;
-    
+        
     @Before
     public void setup() throws IOException {
         File outputDir = new File(getTestDir());

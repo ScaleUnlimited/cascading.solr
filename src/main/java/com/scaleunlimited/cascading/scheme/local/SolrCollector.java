@@ -12,8 +12,8 @@ import com.scaleunlimited.cascading.scheme.core.SolrWriter;
 
 public class SolrCollector extends SolrWriter {
 
-    public SolrCollector(FlowProcess<Properties> flowProcess, Fields sinkFields, File solrConfDir, int maxSegments, String dataDirPropertyName, String dataDir) throws IOException {
-        super(new LocalKeepAliveHook(flowProcess), sinkFields, dataDirPropertyName, dataDir, solrConfDir, maxSegments);
+    public SolrCollector(FlowProcess<Properties> flowProcess, Fields sinkFields, File solrConfDir, int maxSegments, String dataDir) throws IOException {
+        super(new LocalKeepAliveHook(flowProcess), sinkFields, dataDir, solrConfDir, maxSegments);
     }
     
     public void collect(Tuple value) throws IOException {
