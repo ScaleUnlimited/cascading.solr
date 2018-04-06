@@ -26,26 +26,20 @@ public class SolrScheme extends Scheme<Properties, InputStream, OutputStream, Vo
 
     public static final int DEFAULT_DEFAULT_MAX_SEGMENTS = 1;
     
-    private File _solrCoreDir;
+    private File _solrConfDir;
     private int _maxSegments;
-    private String _dataDirPropertyName;
     
-    public SolrScheme(Fields schemeFields, String solrCoreDir) throws IOException, ParserConfigurationException, SAXException {
-        this(schemeFields, solrCoreDir, DEFAULT_DEFAULT_MAX_SEGMENTS);
+    public SolrScheme(Fields schemeFields, String solrConfDir) throws IOException, ParserConfigurationException, SAXException {
+        this(schemeFields, solrConfDir, DEFAULT_DEFAULT_MAX_SEGMENTS);
     }
     
-    public SolrScheme(Fields schemeFields, String solrCoreDir, int maxSegments) throws IOException, ParserConfigurationException, SAXException {
-        this(schemeFields, solrCoreDir, DEFAULT_DEFAULT_MAX_SEGMENTS, SolrSchemeUtil.DEFAULT_DATA_DIR_PROPERTY_NAME);
-    }
-    
-    public SolrScheme(Fields schemeFields, String solrCoreDir, int maxSegments, String dataDirPropertyName) throws IOException, ParserConfigurationException, SAXException {
+    public SolrScheme(Fields schemeFields, String solrConfDir, int maxSegments) throws IOException, ParserConfigurationException, SAXException {
         super(schemeFields, schemeFields);
 
-        _solrCoreDir = new File(solrCoreDir);
+        _solrConfDir = new File(solrConfDir);
         _maxSegments = maxSegments;
-        _dataDirPropertyName = dataDirPropertyName;
 
-        SolrSchemeUtil.validate(_solrCoreDir, _dataDirPropertyName, schemeFields);
+        SolrSchemeUtil.validate(_solrConfDir, schemeFields);
     }
     
     @Override
@@ -79,7 +73,7 @@ public class SolrScheme extends Scheme<Properties, InputStream, OutputStream, Vo
 
         // Set context to be the embedded solr server (or rather a wrapper for it, that handles caching)
         // TODO this call gets made BEFORE sinkConfInit, so I don't have the _dataDir set up at this point, which seems wrong.
-        SolrCollector collector = new SolrCollector(flowProcess, getSinkFields(), _solrCoreDir, _maxSegments, _dataDirPropertyName, path);
+        SolrCollector collector = new SolrCollector(flowProcess, getSinkFields(), _solrConfDir, _maxSegments, path);
         sinkCall.setContext(collector);
     }
     

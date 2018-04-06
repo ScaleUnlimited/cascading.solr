@@ -45,23 +45,19 @@ public class SolrSchemeHadoopTest extends AbstractSolrSchemeTest {
     }
     
     @Override
-    protected Scheme<?, ?, ?, ?, ?> makeScheme(Fields schemeFields, String solrCoreDir) throws Exception {
-        return new SolrScheme(schemeFields, solrCoreDir);
+    protected Scheme<?, ?, ?, ?, ?> makeScheme(Fields schemeFields, String solrConfDir) throws Exception {
+        return new SolrScheme(schemeFields, solrConfDir);
     }
     
     @Override
-    protected Scheme<?, ?, ?, ?, ?> makeScheme(Fields schemeFields, String solrCoreDir, int maxSegments) throws Exception {
-        return new SolrScheme(schemeFields, solrCoreDir, maxSegments);
+    protected Scheme<?, ?, ?, ?, ?> makeScheme(Fields schemeFields, String solrConfDir, int maxSegments) throws Exception {
+        return new SolrScheme(schemeFields, solrConfDir, maxSegments);
     }
     
-    @Override
-    protected Scheme<?, ?, ?, ?, ?> makeScheme(Fields schemeFields, String solrCoreDir, int maxSegments, String dataDirPropertyName) throws Exception {
-        return new SolrScheme(schemeFields, solrCoreDir, maxSegments, dataDirPropertyName);
-    }
-    
+    @SuppressWarnings({ "rawtypes", "unchecked" })
     @Override
     protected Tap<?, ?, ?> makeSolrSink(Fields fields, String path) throws Exception {
-        Scheme scheme = new SolrScheme(fields, SOLR_CORE_DIR);
+        Scheme scheme = new SolrScheme(fields, SOLR_CONF_DIR);
         return new Hfs(scheme, path, SinkMode.REPLACE);
     }
     

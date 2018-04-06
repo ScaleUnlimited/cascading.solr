@@ -2,6 +2,7 @@ package com.scaleunlimited.cascading.scheme.core;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Map;
@@ -19,52 +20,56 @@ import cascading.tuple.Fields;
 
 public class SolrSchemeUtil {
 
-    public static final String DEFAULT_DATA_DIR_PROPERTY_NAME = "solr.data.dir";
+    public static final String CORE_DIR_NAME = "core";
 
-    public static File makeTempSolrHome(File solrCoreDir) throws IOException {
+    public static File makeTempSolrHome(File solrConfDir, File dataDir) throws IOException {
         String tmpFolder = System.getProperty("java.io.tmpdir");
         File tmpSolrHome = new File(tmpFolder, UUID.randomUUID().toString());
         
         // Set up a temp location for Solr home, where we're write out a synthetic solr.xml
         // that references the core directory.
-        String coreName = solrCoreDir.getName();
-        String corePath = solrCoreDir.getAbsolutePath();
-        String solrXmlContent = String.format("<solr><cores><core name=\"%s\" instanceDir=\"%s\"></core></cores></solr>",
-                                              coreName, corePath);
         File solrXmlFile = new File(tmpSolrHome, "solr.xml");
-        FileUtils.write(solrXmlFile, solrXmlContent);
+        FileUtils.write(solrXmlFile, "<solr></solr>", StandardCharsets.UTF_8);
+        File coreDir = new File(tmpSolrHome, CORE_DIR_NAME);
+        coreDir.mkdirs();
+        
+        // Create the core.properties file with appropriate entries.
+        File coreProps = new File(coreDir, "core.properties");
+        
+        StringBuilder props = new StringBuilder();
+        props.append("enable.special-handlers=false\n");    // All we need is the update request handler
+        props.append("enable.cache-warming=false\n");       // We certainly don't need to warm the cache
+        
+        if (dataDir != null) {
+            props.append("dataDir=");
+            props.append(dataDir.getAbsolutePath());
+            props.append('\n');
+        }
+        
+        FileUtils.write(coreProps, props.toString(), StandardCharsets.UTF_8);
+        
+        // Copy over all of the conf/ dir files.
+        File destDir = new File(coreDir, "conf");
+        FileUtils.copyDirectory(solrConfDir, destDir);
 
         return tmpSolrHome;
     }
     
-    public static void validate(File solrCoreDir, String dataDirPropertyName, Fields schemeFields) throws IOException {
+    public static void validate(File solrConfDir, Fields schemeFields) throws IOException {
         
-        // Verify solrHomeDir exists
-        if (!solrCoreDir.exists() || !solrCoreDir.isDirectory()) {
-            throw new TapException("Solr core directory doesn't exist: " + solrCoreDir);
+        // Verify solrConfDir exists
+        if (!solrConfDir.exists() || !solrConfDir.isDirectory()) {
+            throw new TapException("Solr conf directory doesn't exist: " + solrConfDir);
         }
-        
-        File tmpSolrHome = makeTempSolrHome(solrCoreDir);
-        
-        // Set up a temp location for Solr home, where we're write out a synthetic solr.xml
-        // that references the core directory.
-        String coreName = solrCoreDir.getName();
-        String corePath = solrCoreDir.getAbsolutePath();
-        String solrXmlContent = String.format("<solr><cores><core name=\"%s\" instanceDir=\"%s\"></core></cores></solr>",
-                                              coreName, corePath);
-        File solrXmlFile = new File(tmpSolrHome, "solr.xml");
-        FileUtils.write(solrXmlFile, solrXmlContent);
         
         // Set up a temp location for data, so when we instantiate the coreContainer,
         // we don't pollute the solr home with a /data sub-dir.
         String tmpFolder = System.getProperty("java.io.tmpdir");
         File tmpDataDir = new File(tmpFolder, UUID.randomUUID().toString());
         tmpDataDir.mkdir();
-        
-        System.setProperty(dataDirPropertyName, tmpDataDir.getAbsolutePath());
-        System.setProperty("enable.special-handlers", "false"); // All we need is the update request handler
-        System.setProperty("enable.cache-warming", "false"); // We certainly don't need to warm the cache
-        
+
+        // Create a temp solr home dir with a solr.xml and core.properties file to work off.
+        File tmpSolrHome = makeTempSolrHome(solrConfDir, tmpDataDir);
         CoreContainer coreContainer = new CoreContainer(tmpSolrHome.getAbsolutePath());
         
         try {

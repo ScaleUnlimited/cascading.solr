@@ -7,7 +7,7 @@
 	<artifactId>cascading.solr</artifactId>
 	<name>Cascading Scheme for Apache Solr</name>
 	<packaging>jar</packaging>
-	<version>2.6-SNAPSHOT</version>
+	<version>2.6-SOLR6</version>
 	<description>Cascading Scheme for creating Lucene indexes using Solr</description>
 	<url>http://github.com/ScaleUnlimited/cascading.solr</url>
 	<issueManagement>
@@ -34,9 +34,9 @@
 	</repositories>
 	
     <properties>
-        <cascading.version>2.5.6</cascading.version>
-        <hadoop.version>2.2.0</hadoop.version>
-        <solr.version>4.10.1</solr.version>
+        <cascading.version>2.7.1</cascading.version>
+        <hadoop.version>2.6.0</hadoop.version>
+        <solr.version>6.6.2</solr.version>
     </properties>
     
 	<dependencies>
@@ -84,6 +84,12 @@
             </exclusions>
         </dependency>
         
+        <dependency>
+            <groupId>commons-io</groupId>
+            <artifactId>commons-io</artifactId>
+            <version>2.5</version>
+        </dependency>
+
         <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-api</artifactId>

@@ -5,7 +5,6 @@ import java.io.IOException;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.io.BytesWritable;
-import org.apache.solr.client.solrj.SolrServer;
 import org.apache.solr.client.solrj.embedded.EmbeddedSolrServer;
 import org.apache.solr.client.solrj.response.QueryResponse;
 import org.apache.solr.common.params.CommonParams;
@@ -32,9 +31,10 @@ import com.scaleunlimited.cascading.scheme.local.SolrScheme;
 
 public abstract class AbstractSolrSchemeTest extends Assert {
 
-    private static final String SOLR_HOME_DIR = "src/test/resources/solr-home-4.1/"; 
-    protected static final String SOLR_CORE_DIR = SOLR_HOME_DIR + "collection1"; 
-
+    private static final String SOLR_HOME_DIR = "src/test/resources/solr-home-6.6.2/"; 
+    protected static final String SOLR_CONF_DIR = SOLR_HOME_DIR + "cores/testcore/conf"; 
+    private static final String CORE_NAME = "testcore";
+    
     protected abstract String getTestDir();
     
     protected abstract Tap<?, ?, ?> makeSourceTap(Fields fields, String path);
@@ -42,12 +42,10 @@ public abstract class AbstractSolrSchemeTest extends Assert {
     protected abstract Tap<?, ?, ?> makeSolrSink(Fields fields, String path) throws Exception;
     protected abstract FlowConnector makeFlowConnector();
     
-    protected abstract Scheme<?, ?, ?, ?, ?> makeScheme(Fields schemeFields, String solrCoreDir) throws Exception;
+    protected abstract Scheme<?, ?, ?, ?, ?> makeScheme(Fields schemeFields, String solrConfDir) throws Exception;
     
-    protected abstract Scheme<?, ?, ?, ?, ?> makeScheme(Fields schemeFields, String solrCoreDir, int maxSegments) throws Exception;
-    
-    protected abstract Scheme<?, ?, ?, ?, ?> makeScheme(Fields schemeFields, String solrCoreDir, int maxSegments, String dataDirPropertyName) throws Exception;
-    
+    protected abstract Scheme<?, ?, ?, ?, ?> makeScheme(Fields schemeFields, String solrConfDir, int maxSegments) throws Exception;
+        
     @Before
     public void setup() throws IOException {
         File outputDir = new File(getTestDir());
@@ -75,7 +73,7 @@ public abstract class AbstractSolrSchemeTest extends Assert {
     protected void testSchemeWrongFields() throws Exception {
         try {
             // Need to make sure we include the required fields.
-            makeScheme(new Fields("id", "bogus-field"), SOLR_CORE_DIR);
+            makeScheme(new Fields("id", "bogus-field"), SOLR_CONF_DIR);
             fail("Should have thrown exception");
         } catch (TapException e) {
             assert(e.getMessage().contains("field name doesn't exist"));
@@ -84,7 +82,7 @@ public abstract class AbstractSolrSchemeTest extends Assert {
 
     protected void testSchemeMissingRequiredField() throws Exception {
         try {
-            makeScheme(new Fields("sku"), SOLR_CORE_DIR);
+            makeScheme(new Fields("sku"), SOLR_CONF_DIR);
             fail("Should have thrown exception");
         } catch (TapException e) {
             assert(e.getMessage().contains("field name for required"));
@@ -95,7 +93,7 @@ public abstract class AbstractSolrSchemeTest extends Assert {
         final Fields testFields = new Fields("id", "name", "price", "inStock");
         String out = getTestDir() + "testIndexSink/out";
 
-        DirectoryTap solrSink = new DirectoryTap(new SolrScheme(testFields, SOLR_CORE_DIR), out, SinkMode.REPLACE);
+        DirectoryTap solrSink = new DirectoryTap(new SolrScheme(testFields, SOLR_CONF_DIR), out, SinkMode.REPLACE);
         
         TupleEntryCollector writer = solrSink.openForWrite(new LocalFlowProcess());
 
@@ -106,15 +104,16 @@ public abstract class AbstractSolrSchemeTest extends Assert {
         writer.close();
     }
     
+    @SuppressWarnings({ "rawtypes", "unchecked" })
     protected void testSimpleIndexing() throws Exception {
         final Fields testFields = new Fields("id", "name", "price", "cat", "inStock", "image");
 
-        final String in = getTestDir() + "testSimpleIndexing/in";
-        final String out = getTestDir() + "testSimpleIndexing/out";
+        final File in = new File(getTestDir() + "testSimpleIndexing/in");
+        final File out =  new File(getTestDir() + "testSimpleIndexing/out");
 
         byte[] imageData = new byte[] {0, 1, 2, 3, 5};
         
-        Tap source = makeSourceTap(testFields, in);
+        Tap source = makeSourceTap(testFields, in.getAbsolutePath());
         TupleEntryCollector write = source.openForWrite(makeFlowProcess());
         Tuple t = new Tuple();
         t.add(1);
@@ -141,19 +140,19 @@ public abstract class AbstractSolrSchemeTest extends Assert {
         // Now read from the results, and write to a Solr index.
         Pipe writePipe = new Pipe("tuples to Solr");
 
-        Tap solrSink = makeSolrSink(testFields, out);
+        Tap solrSink = makeSolrSink(testFields, out.getAbsolutePath());
         Flow flow = makeFlowConnector().connect(source, solrSink, writePipe);
         flow.complete();
 
         // Open up the Solr index, and do some searches.
-        System.setProperty("solr.data.dir", out + "/part-00000");
+        System.setProperty("solr.data.dir", new File(out,"/part-00000").getAbsolutePath());
 
         CoreContainer coreContainer = new CoreContainer(SOLR_HOME_DIR);
         coreContainer.load();
-        SolrServer solrServer = new EmbeddedSolrServer(coreContainer, "");
+        EmbeddedSolrServer solrServer = new EmbeddedSolrServer(coreContainer, CORE_NAME);
 
         ModifiableSolrParams params = new ModifiableSolrParams();
-        params.set(CommonParams.Q, "turbowriter");
+        params.set(CommonParams.Q, "name:turbowriter");
 
         QueryResponse res = solrServer.query(params);
         assertEquals(1, res.getResults().size());
@@ -173,6 +172,8 @@ public abstract class AbstractSolrSchemeTest extends Assert {
         params.set(CommonParams.Q, "bogus");
         res = solrServer.query(params);
         assertEquals(0, res.getResults().size());
+        
+        solrServer.close();
     }
 
 

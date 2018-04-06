@@ -29,26 +29,20 @@ import com.scaleunlimited.cascading.scheme.core.SolrSchemeUtil;
 @SuppressWarnings("serial")
 public class SolrScheme extends Scheme<JobConf, RecordReader<Tuple, Tuple>, OutputCollector<Tuple, Tuple>, Object[], Void> {
 
-    private File _solrCoreDir;
+    private File _solrConfDir;
     private int _maxSegments;
-    private String _dataDirPropertyName;
     
-    public SolrScheme(Fields schemeFields, String solrCoreDir) throws IOException, ParserConfigurationException, SAXException {
-        this(schemeFields, solrCoreDir, SolrOutputFormat.DEFAULT_MAX_SEGMENTS);
+    public SolrScheme(Fields schemeFields, String solrConfDir) throws IOException, ParserConfigurationException, SAXException {
+        this(schemeFields, solrConfDir, SolrOutputFormat.DEFAULT_MAX_SEGMENTS);
     }
     
-    public SolrScheme(Fields schemeFields, String solrCoreDir, int maxSegments) throws IOException, ParserConfigurationException, SAXException {
-        this(schemeFields, solrCoreDir, SolrOutputFormat.DEFAULT_MAX_SEGMENTS, SolrSchemeUtil.DEFAULT_DATA_DIR_PROPERTY_NAME);
-    }
-    
-    public SolrScheme(Fields schemeFields, String solrCoreDir, int maxSegments, String dataDirPropertyName) throws IOException, ParserConfigurationException, SAXException {
+    public SolrScheme(Fields schemeFields, String solrConfDir, int maxSegments) throws IOException, ParserConfigurationException, SAXException {
         super(schemeFields, schemeFields);
 
-        _solrCoreDir = new File(solrCoreDir);
+        _solrConfDir = new File(solrConfDir);
         _maxSegments = maxSegments;
-        _dataDirPropertyName = dataDirPropertyName;
 
-        SolrSchemeUtil.validate(_solrCoreDir, _dataDirPropertyName, schemeFields);
+        SolrSchemeUtil.validate(_solrConfDir, schemeFields);
     }
     
     @Override
@@ -70,15 +64,15 @@ public class SolrScheme extends Scheme<JobConf, RecordReader<Tuple, Tuple>, Outp
     public void sinkConfInit(FlowProcess<JobConf> flowProcess, Tap<JobConf, RecordReader<Tuple, Tuple>, OutputCollector<Tuple, Tuple>> tap, JobConf conf) {
         // Pick temp location in HDFS for conf files.
         // TODO KKr - should I get rid of this temp directory when we're done?
-        String coreDirname = _solrCoreDir.getName();
-        Path hdfsSolrCoreDir = new Path(Hfs.getTempPath(conf),  "solr-core-" + Util.createUniqueID() + "/" + coreDirname);
+        String confDirname = _solrConfDir.getName();
+        Path hdfsSolrConfDir = new Path(Hfs.getTempPath(conf),  "solr-conf-" + Util.createUniqueID() + "/" + confDirname);
         
-        // Copy Solr core directory into HDFS.
+        // Copy Solr conf directory into HDFS.
         try {
-            FileSystem fs = hdfsSolrCoreDir.getFileSystem(conf);
-            fs.copyFromLocalFile(new Path(_solrCoreDir.getAbsolutePath()), hdfsSolrCoreDir);
+            FileSystem fs = hdfsSolrConfDir.getFileSystem(conf);
+            fs.copyFromLocalFile(new Path(_solrConfDir.getAbsolutePath()), hdfsSolrConfDir);
         } catch (IOException e) {
-            throw new TapException("Can't copy Solr core directory into HDFS", e);
+            throw new TapException("Can't copy Solr conf directory into HDFS", e);
         }
 
         conf.setOutputKeyClass(Tuple.class);
@@ -91,9 +85,8 @@ public class SolrScheme extends Scheme<JobConf, RecordReader<Tuple, Tuple>, Outp
             throw new TapException("Can't serialize sink fields", e);
         }
 
-        conf.set(SolrOutputFormat.SOLR_CORE_PATH_KEY, hdfsSolrCoreDir.toString());
+        conf.set(SolrOutputFormat.SOLR_CONF_PATH_KEY, hdfsSolrConfDir.toString());
         conf.setInt(SolrOutputFormat.MAX_SEGMENTS_KEY, _maxSegments);
-        conf.set(SolrOutputFormat.DATA_DIR_PROPERTY_NAME_KEY, _dataDirPropertyName);
     }
 
     @Override
