@@ -31,8 +31,8 @@ import com.scaleunlimited.cascading.scheme.local.SolrScheme;
 
 public abstract class AbstractSolrSchemeTest extends Assert {
 
-    private static final String SOLR_HOME_DIR = "src/test/resources/solr-home-6.6.2/"; 
-    protected static final String SOLR_CONF_DIR = SOLR_HOME_DIR + "cores/testcore/conf"; 
+    private static final String SOLR_HOME_DIR = "src/test/resources/solr-home-8.2.0/"; 
+    protected static final String SOLR_CONF_DIR = SOLR_HOME_DIR + "configsets/testcore/conf"; 
     private static final String CORE_NAME = "testcore";
     
     protected abstract String getTestDir();
@@ -64,7 +64,7 @@ public abstract class AbstractSolrSchemeTest extends Assert {
 
     protected void testSchemeChecksBadConf() throws Exception {
         try {
-            makeScheme(new Fields("a", "b"), "src/test/resources");
+            makeScheme(new Fields("a", "b"), "src/test/resources/solr-home-empty");
             fail("Should have thrown exception");
         } catch (TapException e) {
         }
@@ -85,7 +85,7 @@ public abstract class AbstractSolrSchemeTest extends Assert {
             makeScheme(new Fields("sku"), SOLR_CONF_DIR);
             fail("Should have thrown exception");
         } catch (TapException e) {
-            assert(e.getMessage().contains("field name for required"));
+            assert(e.getMessage().contains("doesn't exist"));
         }
     }
     

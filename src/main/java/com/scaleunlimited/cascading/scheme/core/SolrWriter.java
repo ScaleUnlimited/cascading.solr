@@ -6,18 +6,15 @@ import java.io.IOException;
 import org.apache.hadoop.io.BytesWritable;
 import org.apache.solr.client.solrj.SolrServerException;
 import org.apache.solr.client.solrj.embedded.EmbeddedSolrServer;
+import org.apache.solr.client.solrj.request.UpdateRequest;
 import org.apache.solr.common.SolrInputDocument;
 import org.apache.solr.common.params.UpdateParams;
 import org.apache.solr.core.CoreContainer;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import cascading.tuple.Fields;
 import cascading.tuple.Tuple;
 
 public abstract class SolrWriter {
-
-    private static final Logger LOGGER = LoggerFactory.getLogger(SolrWriter.class);
 
     // TODO KKr - make this configurable.
     private static final int MAX_DOCS_PER_ADD = 500;
@@ -29,18 +26,18 @@ public abstract class SolrWriter {
     
     private transient CoreContainer _coreContainer;
     private transient EmbeddedSolrServer _solrServer;
-    private transient BinaryUpdateRequest _updateRequest;
+    private transient UpdateRequest _updateRequest;
 
     public SolrWriter(KeepAliveHook keepAlive, Fields sinkFields, String dataDir, File solrConfDir, int maxSegments) throws IOException {
         _keepAlive = keepAlive;
         _sinkFields = sinkFields;
         _maxSegments = maxSegments;
         
-        _updateRequest = new BinaryUpdateRequest();
+        _updateRequest = new UpdateRequest();
         // Set up overwrite=false. See https://issues.apache.org/jira/browse/SOLR-653
         // for details why we have to do it this way.
         _updateRequest.setParam(UpdateParams.OVERWRITE, Boolean.toString(false));
-
+        
         // Fire up an embedded Solr server
         try {
             File solrHome = SolrSchemeUtil.makeTempSolrHome(solrConfDir, new File(dataDir));
@@ -99,7 +96,8 @@ public abstract class SolrWriter {
     }
     
     private void flushInputDocuments(boolean force) throws IOException {
-        if ((force && (_updateRequest.getDocListSize() > 0)) || (_updateRequest.getDocListSize() >= MAX_DOCS_PER_ADD)) {
+        int numDocs = _updateRequest.getDocuments().size();
+        if ((force && (numDocs > 0)) || (numDocs >= MAX_DOCS_PER_ADD)) {
             
             // TODO do we need to do this?
             Thread reporterThread = startProgressThread();
