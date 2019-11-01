@@ -13,6 +13,9 @@ import org.apache.solr.core.CoreContainer;
 import org.junit.Assert;
 import org.junit.Before;
 
+import com.scaleunlimited.cascading.local.DirectoryTap;
+import com.scaleunlimited.cascading.scheme.local.SolrScheme;
+
 import cascading.flow.Flow;
 import cascading.flow.FlowConnector;
 import cascading.flow.FlowProcess;
@@ -25,9 +28,6 @@ import cascading.tap.TapException;
 import cascading.tuple.Fields;
 import cascading.tuple.Tuple;
 import cascading.tuple.TupleEntryCollector;
-
-import com.scaleunlimited.cascading.local.DirectoryTap;
-import com.scaleunlimited.cascading.scheme.local.SolrScheme;
 
 public abstract class AbstractSolrSchemeTest extends Assert {
 
@@ -47,7 +47,7 @@ public abstract class AbstractSolrSchemeTest extends Assert {
     protected abstract Scheme<?, ?, ?, ?, ?> makeScheme(Fields schemeFields, String solrConfDir, int maxSegments) throws Exception;
         
     @Before
-    public void setup() throws IOException {
+    public void setUp() throws IOException {
         File outputDir = new File(getTestDir());
         if (outputDir.exists()) {
             FileUtils.deleteDirectory(outputDir);
