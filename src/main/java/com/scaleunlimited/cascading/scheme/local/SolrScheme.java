@@ -10,6 +10,11 @@ import javax.xml.parsers.ParserConfigurationException;
 
 import org.xml.sax.SAXException;
 
+import com.scaleunlimited.cascading.local.DirectoryFileOutputStream;
+import com.scaleunlimited.cascading.scheme.core.Metadata;
+import com.scaleunlimited.cascading.scheme.core.SolrSchemeUtil;
+import com.scaleunlimited.cascading.scheme.hadoop.SolrOutputFormat;
+
 import cascading.flow.FlowProcess;
 import cascading.scheme.Scheme;
 import cascading.scheme.SinkCall;
@@ -18,31 +23,27 @@ import cascading.tap.Tap;
 import cascading.tap.TapException;
 import cascading.tuple.Fields;
 
-import com.scaleunlimited.cascading.local.DirectoryFileOutputStream;
-import com.scaleunlimited.cascading.scheme.core.SolrSchemeUtil;
-
 @SuppressWarnings("serial")
 public class SolrScheme extends Scheme<Properties, InputStream, OutputStream, Void, SolrCollector> {
 
     public static final int DEFAULT_DEFAULT_MAX_SEGMENTS = 1;
     
-    private File _solrCoreDir;
-    private int _maxSegments;
+    private boolean _isIncludeMetadata;
     private String _dataDirPropertyName;
+    private int _maxSegments;
+    private File _solrCoreDir;
+    private File _partDir;
     
     public SolrScheme(Fields schemeFields, String solrCoreDir) throws IOException, ParserConfigurationException, SAXException {
-        this(schemeFields, solrCoreDir, DEFAULT_DEFAULT_MAX_SEGMENTS);
+        this(schemeFields, solrCoreDir, SolrOutputFormat.DEFAULT_MAX_SEGMENTS, false, SolrSchemeUtil.DEFAULT_DATA_DIR_PROPERTY_NAME);
     }
     
-    public SolrScheme(Fields schemeFields, String solrCoreDir, int maxSegments) throws IOException, ParserConfigurationException, SAXException {
-        this(schemeFields, solrCoreDir, DEFAULT_DEFAULT_MAX_SEGMENTS, SolrSchemeUtil.DEFAULT_DATA_DIR_PROPERTY_NAME);
-    }
-    
-    public SolrScheme(Fields schemeFields, String solrCoreDir, int maxSegments, String dataDirPropertyName) throws IOException, ParserConfigurationException, SAXException {
+    public SolrScheme(Fields schemeFields, String solrCoreDir, int maxSegments, boolean isIncludeMetadata, String dataDirPropertyName) throws IOException, ParserConfigurationException, SAXException {
         super(schemeFields, schemeFields);
 
         _solrCoreDir = new File(solrCoreDir);
         _maxSegments = maxSegments;
+        _isIncludeMetadata = isIncludeMetadata;
         _dataDirPropertyName = dataDirPropertyName;
 
         SolrSchemeUtil.validate(_solrCoreDir, _dataDirPropertyName, schemeFields);
@@ -74,8 +75,11 @@ public class SolrScheme extends Scheme<Properties, InputStream, OutputStream, Vo
             throw new TapException("SolrScheme can only be used with a DirectoryTap in local mode");
         }
         
+        // Find the part-00000 directory to use as the Solr data directory,
+        // and save it in case we need to write metadata there.
         DirectoryFileOutputStream os = (DirectoryFileOutputStream)sinkCall.getOutput();
         String path = os.asDirectory();
+        _partDir = new File(path);
 
         // Set context to be the embedded solr server (or rather a wrapper for it, that handles caching)
         SolrCollector collector = new SolrCollector(flowProcess, getSinkFields(), _solrCoreDir, _maxSegments, _dataDirPropertyName, path);
@@ -96,6 +100,9 @@ public class SolrScheme extends Scheme<Properties, InputStream, OutputStream, Vo
     public void sinkCleanup(FlowProcess<Properties> flowProcess, SinkCall<SolrCollector, OutputStream> sinkCall) throws IOException {
         SolrCollector collector = sinkCall.getContext();
         collector.cleanup();
+        if (_isIncludeMetadata) {
+            Metadata.writeMetadata(_partDir);
+        }
     }
 
 }

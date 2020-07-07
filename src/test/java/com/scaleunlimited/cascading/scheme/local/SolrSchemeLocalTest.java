@@ -1,11 +1,11 @@
 package com.scaleunlimited.cascading.scheme.local;
 
-import java.io.File;
-import java.io.IOException;
-
-import org.apache.commons.io.FileUtils;
-import org.junit.Before;
 import org.junit.Test;
+
+import com.scaleunlimited.cascading.local.DirectoryTap;
+import com.scaleunlimited.cascading.local.KryoScheme;
+import com.scaleunlimited.cascading.scheme.core.AbstractSolrSchemeTest;
+import com.scaleunlimited.cascading.scheme.core.SolrSchemeUtil;
 
 import cascading.flow.FlowConnector;
 import cascading.flow.FlowProcess;
@@ -16,10 +16,6 @@ import cascading.tap.SinkMode;
 import cascading.tap.Tap;
 import cascading.tap.local.FileTap;
 import cascading.tuple.Fields;
-
-import com.scaleunlimited.cascading.local.DirectoryTap;
-import com.scaleunlimited.cascading.local.KryoScheme;
-import com.scaleunlimited.cascading.scheme.core.AbstractSolrSchemeTest;
 
 public class SolrSchemeLocalTest extends AbstractSolrSchemeTest {
 
@@ -45,6 +41,12 @@ public class SolrSchemeLocalTest extends AbstractSolrSchemeTest {
         return new DirectoryTap(new SolrScheme(fields, SOLR_CORE_DIR), path);
     }
     
+    @SuppressWarnings({ "rawtypes", "unchecked" })
+    @Override
+    protected Tap<?, ?, ?> makeSolrSink(Scheme scheme, String path) throws Exception {
+        return new DirectoryTap(scheme, path);
+    }
+    
     @Override
     protected FlowConnector makeFlowConnector() {
         return new LocalFlowConnector();
@@ -56,13 +58,8 @@ public class SolrSchemeLocalTest extends AbstractSolrSchemeTest {
     }
     
     @Override
-    protected Scheme<?, ?, ?, ?, ?> makeScheme(Fields schemeFields, String solrCoreDir, int maxSegments) throws Exception {
-        return new SolrScheme(schemeFields, solrCoreDir, maxSegments);
-    }
-    
-    @Override
-    protected Scheme<?, ?, ?, ?, ?> makeScheme(Fields schemeFields, String solrCoreDir, int maxSegments, String dataDirPropertyName) throws Exception {
-        return new SolrScheme(schemeFields, solrCoreDir, maxSegments, dataDirPropertyName);
+    protected Scheme<?, ?, ?, ?, ?> makeScheme(Fields schemeFields, String solrCoreDir, boolean isIncludeMetadata) throws Exception {
+        return new SolrScheme(schemeFields, solrCoreDir, SolrScheme.DEFAULT_DEFAULT_MAX_SEGMENTS, isIncludeMetadata, SolrSchemeUtil.DEFAULT_DATA_DIR_PROPERTY_NAME);
     }
     
     @Test
@@ -93,6 +90,11 @@ public class SolrSchemeLocalTest extends AbstractSolrSchemeTest {
     @Test
     public void testSimpleIndexing() throws Exception {
         super.testSimpleIndexing();
+    }
+    
+    @Test
+    public void testMd5() throws Exception {
+        super.testMd5();
     }
     
 }

@@ -5,6 +5,9 @@ import java.util.Map;
 
 import org.junit.Test;
 
+import com.scaleunlimited.cascading.scheme.core.AbstractSolrSchemeTest;
+import com.scaleunlimited.cascading.scheme.core.SolrSchemeUtil;
+
 import cascading.flow.FlowConnector;
 import cascading.flow.FlowProcess;
 import cascading.flow.hadoop.HadoopFlowConnector;
@@ -18,8 +21,6 @@ import cascading.tap.hadoop.Hfs;
 import cascading.tuple.Fields;
 import cascading.tuple.hadoop.BytesSerialization;
 import cascading.tuple.hadoop.TupleSerializationProps;
-
-import com.scaleunlimited.cascading.scheme.core.AbstractSolrSchemeTest;
 
 public class SolrSchemeHadoopTest extends AbstractSolrSchemeTest {
 
@@ -50,18 +51,20 @@ public class SolrSchemeHadoopTest extends AbstractSolrSchemeTest {
     }
     
     @Override
-    protected Scheme<?, ?, ?, ?, ?> makeScheme(Fields schemeFields, String solrCoreDir, int maxSegments) throws Exception {
-        return new SolrScheme(schemeFields, solrCoreDir, maxSegments);
+    protected Scheme<?, ?, ?, ?, ?> makeScheme(Fields schemeFields, String solrCoreDir, boolean isIncludeMetadata) throws Exception {
+        return new SolrScheme(schemeFields, solrCoreDir, SolrOutputFormat.DEFAULT_MAX_SEGMENTS, isIncludeMetadata, SolrSchemeUtil.DEFAULT_DATA_DIR_PROPERTY_NAME);
     }
     
-    @Override
-    protected Scheme<?, ?, ?, ?, ?> makeScheme(Fields schemeFields, String solrCoreDir, int maxSegments, String dataDirPropertyName) throws Exception {
-        return new SolrScheme(schemeFields, solrCoreDir, maxSegments, dataDirPropertyName);
-    }
-    
+    @SuppressWarnings({ "rawtypes", "unchecked" })
     @Override
     protected Tap<?, ?, ?> makeSolrSink(Fields fields, String path) throws Exception {
         Scheme scheme = new SolrScheme(fields, SOLR_CORE_DIR);
+        return new Hfs(scheme, path, SinkMode.REPLACE);
+    }
+    
+    @SuppressWarnings({ "rawtypes", "unchecked" })
+    @Override
+    protected Tap<?, ?, ?> makeSolrSink(Scheme scheme, String path) throws Exception {
         return new Hfs(scheme, path, SinkMode.REPLACE);
     }
     
@@ -98,6 +101,11 @@ public class SolrSchemeHadoopTest extends AbstractSolrSchemeTest {
     @Test
     public void testSimpleIndexing() throws Exception {
         super.testSimpleIndexing();
+    }
+    
+    @Test
+    public void testMd5() throws Exception {
+        super.testMd5();
     }
     
 }

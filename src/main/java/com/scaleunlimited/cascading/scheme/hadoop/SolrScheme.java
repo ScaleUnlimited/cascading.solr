@@ -12,6 +12,8 @@ import org.apache.hadoop.mapred.OutputCollector;
 import org.apache.hadoop.mapred.RecordReader;
 import org.xml.sax.SAXException;
 
+import com.scaleunlimited.cascading.scheme.core.SolrSchemeUtil;
+
 import cascading.flow.FlowProcess;
 import cascading.flow.hadoop.util.HadoopUtil;
 import cascading.scheme.Scheme;
@@ -24,28 +26,24 @@ import cascading.tuple.Fields;
 import cascading.tuple.Tuple;
 import cascading.util.Util;
 
-import com.scaleunlimited.cascading.scheme.core.SolrSchemeUtil;
-
 @SuppressWarnings("serial")
 public class SolrScheme extends Scheme<JobConf, RecordReader<Tuple, Tuple>, OutputCollector<Tuple, Tuple>, Object[], Void> {
-
+    
     private File _solrCoreDir;
     private int _maxSegments;
+    private boolean _isIncludeMetadata;
     private String _dataDirPropertyName;
-    
+   
     public SolrScheme(Fields schemeFields, String solrCoreDir) throws IOException, ParserConfigurationException, SAXException {
-        this(schemeFields, solrCoreDir, SolrOutputFormat.DEFAULT_MAX_SEGMENTS);
+        this(schemeFields, solrCoreDir, SolrOutputFormat.DEFAULT_MAX_SEGMENTS, false, SolrSchemeUtil.DEFAULT_DATA_DIR_PROPERTY_NAME);
     }
     
-    public SolrScheme(Fields schemeFields, String solrCoreDir, int maxSegments) throws IOException, ParserConfigurationException, SAXException {
-        this(schemeFields, solrCoreDir, SolrOutputFormat.DEFAULT_MAX_SEGMENTS, SolrSchemeUtil.DEFAULT_DATA_DIR_PROPERTY_NAME);
-    }
-    
-    public SolrScheme(Fields schemeFields, String solrCoreDir, int maxSegments, String dataDirPropertyName) throws IOException, ParserConfigurationException, SAXException {
+    public SolrScheme(Fields schemeFields, String solrCoreDir, int maxSegments, boolean isIncludeMetadata, String dataDirPropertyName) throws IOException, ParserConfigurationException, SAXException {
         super(schemeFields, schemeFields);
 
         _solrCoreDir = new File(solrCoreDir);
         _maxSegments = maxSegments;
+        _isIncludeMetadata = isIncludeMetadata;
         _dataDirPropertyName = dataDirPropertyName;
 
         SolrSchemeUtil.validate(_solrCoreDir, _dataDirPropertyName, schemeFields);
@@ -93,6 +91,7 @@ public class SolrScheme extends Scheme<JobConf, RecordReader<Tuple, Tuple>, Outp
 
         conf.set(SolrOutputFormat.SOLR_CORE_PATH_KEY, hdfsSolrCoreDir.toString());
         conf.setInt(SolrOutputFormat.MAX_SEGMENTS_KEY, _maxSegments);
+        conf.setBoolean(SolrOutputFormat.INCLUDE_METADATA_KEY, _isIncludeMetadata);
         conf.set(SolrOutputFormat.DATA_DIR_PROPERTY_NAME_KEY, _dataDirPropertyName);
     }
 
@@ -105,4 +104,5 @@ public class SolrScheme extends Scheme<JobConf, RecordReader<Tuple, Tuple>, Outp
     public void sink(FlowProcess<JobConf> flowProcess, SinkCall<Void, OutputCollector<Tuple, Tuple>> sinkCall) throws IOException {
         sinkCall.getOutput().collect(Tuple.NULL, sinkCall.getOutgoingEntry().getTuple());
     }
+    
 }
