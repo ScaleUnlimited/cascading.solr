@@ -25,7 +25,7 @@ public class Metadata {
                 InputStream is = new FileInputStream(indexFile);
                 String md5 = null;
                 try {
-                    md5 = DigestUtils.md2Hex(is);
+                    md5 = DigestUtils.md5Hex(is);
                 } finally {
                     is.close();
                 }
