@@ -5,6 +5,8 @@ import java.util.Map;
 
 import org.junit.Test;
 
+import com.scaleunlimited.cascading.scheme.core.AbstractSolrSchemeTest;
+
 import cascading.flow.FlowConnector;
 import cascading.flow.FlowProcess;
 import cascading.flow.hadoop.HadoopFlowConnector;
@@ -18,8 +20,6 @@ import cascading.tap.hadoop.Hfs;
 import cascading.tuple.Fields;
 import cascading.tuple.hadoop.BytesSerialization;
 import cascading.tuple.hadoop.TupleSerializationProps;
-
-import com.scaleunlimited.cascading.scheme.core.AbstractSolrSchemeTest;
 
 public class SolrSchemeHadoopTest extends AbstractSolrSchemeTest {
 
@@ -54,10 +54,20 @@ public class SolrSchemeHadoopTest extends AbstractSolrSchemeTest {
         return new SolrScheme(schemeFields, solrConfDir, maxSegments);
     }
     
+    @Override
+    protected Scheme<?, ?, ?, ?, ?> makeScheme(Fields schemeFields, String solrConfDir, boolean isIncludeMetadata) throws Exception {
+        return new SolrScheme(schemeFields, solrConfDir, isIncludeMetadata);
+    }
+    
     @SuppressWarnings({ "rawtypes", "unchecked" })
     @Override
     protected Tap<?, ?, ?> makeSolrSink(Fields fields, String path) throws Exception {
         Scheme scheme = new SolrScheme(fields, SOLR_CONF_DIR);
+        return new Hfs(scheme, path, SinkMode.REPLACE);
+    }
+    
+    @Override
+    protected Tap<?, ?, ?> makeSolrSink(Scheme scheme, String path) throws Exception {
         return new Hfs(scheme, path, SinkMode.REPLACE);
     }
     
@@ -94,6 +104,11 @@ public class SolrSchemeHadoopTest extends AbstractSolrSchemeTest {
     @Test
     public void testSimpleIndexing() throws Exception {
         super.testSimpleIndexing();
+    }
+    
+    @Test
+    public void testMd5() throws Exception {
+        super.testMd5();
     }
     
 }

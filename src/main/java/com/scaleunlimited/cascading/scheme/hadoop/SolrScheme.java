@@ -12,6 +12,8 @@ import org.apache.hadoop.mapred.OutputCollector;
 import org.apache.hadoop.mapred.RecordReader;
 import org.xml.sax.SAXException;
 
+import com.scaleunlimited.cascading.scheme.core.SolrSchemeUtil;
+
 import cascading.flow.FlowProcess;
 import cascading.flow.hadoop.util.HadoopUtil;
 import cascading.scheme.Scheme;
@@ -24,23 +26,31 @@ import cascading.tuple.Fields;
 import cascading.tuple.Tuple;
 import cascading.util.Util;
 
-import com.scaleunlimited.cascading.scheme.core.SolrSchemeUtil;
-
 @SuppressWarnings("serial")
 public class SolrScheme extends Scheme<JobConf, RecordReader<Tuple, Tuple>, OutputCollector<Tuple, Tuple>, Object[], Void> {
-
+    
     private File _solrConfDir;
     private int _maxSegments;
-    
+    private boolean _isIncludeMetadata;
+   
     public SolrScheme(Fields schemeFields, String solrConfDir) throws IOException, ParserConfigurationException, SAXException {
         this(schemeFields, solrConfDir, SolrOutputFormat.DEFAULT_MAX_SEGMENTS);
     }
     
     public SolrScheme(Fields schemeFields, String solrConfDir, int maxSegments) throws IOException, ParserConfigurationException, SAXException {
+        this(schemeFields, solrConfDir, SolrOutputFormat.DEFAULT_MAX_SEGMENTS, false);
+    }
+    
+    public SolrScheme(Fields schemeFields, String solrConfDir, boolean isIncludeMetadata) throws IOException, ParserConfigurationException, SAXException {
+        this(schemeFields, solrConfDir, SolrOutputFormat.DEFAULT_MAX_SEGMENTS, isIncludeMetadata);
+    }
+    
+    public SolrScheme(Fields schemeFields, String solrConfDir, int maxSegments, boolean isIncludeMetadata) throws IOException, ParserConfigurationException, SAXException {
         super(schemeFields, schemeFields);
 
         _solrConfDir = new File(solrConfDir);
         _maxSegments = maxSegments;
+        _isIncludeMetadata = isIncludeMetadata;
 
         SolrSchemeUtil.validate(_solrConfDir, schemeFields);
     }
@@ -87,6 +97,7 @@ public class SolrScheme extends Scheme<JobConf, RecordReader<Tuple, Tuple>, Outp
 
         conf.set(SolrOutputFormat.SOLR_CONF_PATH_KEY, hdfsSolrConfDir.toString());
         conf.setInt(SolrOutputFormat.MAX_SEGMENTS_KEY, _maxSegments);
+        conf.setBoolean(SolrOutputFormat.INCLUDE_METADATA_KEY, _isIncludeMetadata);
     }
 
     @Override
@@ -98,4 +109,5 @@ public class SolrScheme extends Scheme<JobConf, RecordReader<Tuple, Tuple>, Outp
     public void sink(FlowProcess<JobConf> flowProcess, SinkCall<Void, OutputCollector<Tuple, Tuple>> sinkCall) throws IOException {
         sinkCall.getOutput().collect(Tuple.NULL, sinkCall.getOutgoingEntry().getTuple());
     }
+    
 }

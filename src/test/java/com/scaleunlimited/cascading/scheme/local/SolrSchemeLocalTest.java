@@ -2,6 +2,10 @@ package com.scaleunlimited.cascading.scheme.local;
 
 import org.junit.Test;
 
+import com.scaleunlimited.cascading.local.DirectoryTap;
+import com.scaleunlimited.cascading.local.KryoScheme;
+import com.scaleunlimited.cascading.scheme.core.AbstractSolrSchemeTest;
+
 import cascading.flow.FlowConnector;
 import cascading.flow.FlowProcess;
 import cascading.flow.local.LocalFlowConnector;
@@ -11,10 +15,6 @@ import cascading.tap.SinkMode;
 import cascading.tap.Tap;
 import cascading.tap.local.FileTap;
 import cascading.tuple.Fields;
-
-import com.scaleunlimited.cascading.local.DirectoryTap;
-import com.scaleunlimited.cascading.local.KryoScheme;
-import com.scaleunlimited.cascading.scheme.core.AbstractSolrSchemeTest;
 
 public class SolrSchemeLocalTest extends AbstractSolrSchemeTest {
 
@@ -41,6 +41,11 @@ public class SolrSchemeLocalTest extends AbstractSolrSchemeTest {
     }
     
     @Override
+    protected Tap<?, ?, ?> makeSolrSink(Scheme scheme, String path) throws Exception {
+        return new DirectoryTap(scheme, path);
+    }
+    
+    @Override
     protected FlowConnector makeFlowConnector() {
         return new LocalFlowConnector();
     }
@@ -53,6 +58,11 @@ public class SolrSchemeLocalTest extends AbstractSolrSchemeTest {
     @Override
     protected Scheme<?, ?, ?, ?, ?> makeScheme(Fields schemeFields, String solrConfDir, int maxSegments) throws Exception {
         return new SolrScheme(schemeFields, solrConfDir, maxSegments);
+    }
+    
+    @Override
+    protected Scheme<?, ?, ?, ?, ?> makeScheme(Fields schemeFields, String solrConfDir, boolean isIncludeMetadata) throws Exception {
+        return new SolrScheme(schemeFields, solrConfDir, isIncludeMetadata);
     }
     
     @Test
@@ -83,6 +93,11 @@ public class SolrSchemeLocalTest extends AbstractSolrSchemeTest {
     @Test
     public void testSimpleIndexing() throws Exception {
         super.testSimpleIndexing();
+    }
+    
+    @Test
+    public void testMd5() throws Exception {
+        super.testMd5();
     }
     
 }
