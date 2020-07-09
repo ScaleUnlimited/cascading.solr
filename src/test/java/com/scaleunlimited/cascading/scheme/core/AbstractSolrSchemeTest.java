@@ -260,7 +260,7 @@ public abstract class AbstractSolrSchemeTest extends Assert {
         InputStream is = new FileInputStream(indexFile);
         String result = null;
         try {
-            result = DigestUtils.md2Hex(is);
+            result = DigestUtils.md5Hex(is);
         } finally {
             is.close();
         }
